@@ -55,6 +55,22 @@ description: 《萬紫千紅》培養計算器的計算公式與程式架構（c
 - `state.overrides = { units, classes, mounts }`：使用者校正，`buildData()` 會把它套到 `BASE` 的深拷貝得到 `D`。改完校正要重新 `buildData()` 再 `renderAll()`。
 - 事件用 `data-bind="路徑"` 與 `data-action="動作"` 做委派。**數字欄位的 `input` 事件只更新結果區（`refreshPlanOutputs`、`renderJudgeOut`、`refreshRecOut`），不要重建正在輸入的欄位**，否則使用者一打字就失去焦點；`change`（下拉、勾選、離開欄位）才重建整個面板。
 - 新增表單欄位時：給 `data-bind`，在 `onBind` 的對應 case 更新狀態，決定是輕量更新還是整塊重建。
+- `defaultPlan(unit)`：有 game8 加入資料時用加入的 Lv/職業/顯示值當起點；沒有（內森、齊利科等第 2・3 部角色）則是 Lv1 平民、全 0，頁面會提示手動輸入。
+- `recRoute(unit, start)`：「套用 game8 推薦路線」按鈕的邏輯——起點已超過的階級直接換成該階最高的推薦職業（與 game8 相同），之後到各推薦職業的 `recLv` 再換職，最後一段到 Lv99。
+- `state.rec`：`{ preset, weights[9], targetLv, tierLv{1..5}, maxTier, includeSpecial, includeDivine, finalClassId, ownedOnly, owned[], showAllRank }`；權重預設組在 `PRESETS`。
+- 資料校正頁的可編輯欄位由 `KIND_INFO` 決定（角色：growth；職業：growth、mod；坐騎：stat、growth）。
+
+### 狀態結構變更
+
+使用者的設定存在瀏覽器裡，改了結構後舊資料仍會被讀回來：
+
+- `plan()` 與載入時的 `Object.assign(defaultRec(), …)` 會補上缺少的欄位，**新增欄位**通常不用額外處理。
+- **改名或改型別**（例如把 `mountId` 改成物件、職業 id 改名）時，要在載入狀態後寫遷移；真的不相容就把 `STORE_KEY` 改成 `fe-bsk-calc-v2`（使用者設定會重置，要在回報中說明）。
+- 不要讓舊狀態造成例外：`clsOf` / `mountOf` 找不到時回傳 `null`，計算與渲染都要能處理 `null`。
+
+### 同步更新說明文字
+
+公式、坐騎規則、未建模項目有變時，除了程式也要改：`app.js` 的 `renderHelp()`（頁面「說明」分頁）、`README.md`，以及本技能的「公式」「已知未建模的部分」。
 
 ## 驗證
 
@@ -72,3 +88,13 @@ node tools/serve.mjs
 ```
 
 打開 http://localhost:8765/ ，確認 console 沒有錯誤、手機寬度（375px）沒有橫向捲動、四個分頁都能切換。這台 Windows 機器上 `python -m http.server` 會斷線，請用 `tools/serve.mjs`。
+
+用 Claude 內建瀏覽器（Browser pane）檢查時：
+
+- 不要直接開 `file:///…/index.html`：內建瀏覽器會把它當成靜態快照，`data.js`、`app.js` 不會執行。
+- 用 `preview_start` 的 `static` 設定。它在 `.claude/launch.json`（`.claude/` 被 gitignore，clone 後要自己建）：
+  ```json
+  { "version": "0.0.1", "configurations": [ { "name": "static", "runtimeExecutable": "node", "runtimeArgs": ["tools/serve.mjs", "8766"], "port": 8766 } ] }
+  ```
+- 用 `resize_window` 模擬手機後，分頁偶爾會卡住（所有指令逾時），這不是程式問題；關掉分頁、用 `tabs_create` 開新分頁再 `navigate` 即可。
+- 測試時會改到預覽分頁的 localStorage；測完可執行 `localStorage.removeItem('fe-bsk-calc-v1')` 還原成預設狀態。

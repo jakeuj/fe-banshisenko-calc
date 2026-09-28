@@ -22,6 +22,21 @@ description: 查證《萬紫千紅》(Fire Emblem Fortune's Weave / ファイア
 - game8 的數值直接讀 `tools/raw/game8.json`（欄位見 `fe-data-update/references/game8-columns.md`）。
 - 各來源的網址、用途、存取方法：`references/sources.md`。
 - 已知的來源衝突與目前的決定：`references/conflicts.md`。**開始查之前先看這份**，避免重做已經查過的事。
+- 網頁數值是用 JavaScript 產生的（例如 game8 內嵌計算器）時，先找它載入的原始資料檔（game8 計算器就是 `assets.game8.jp/.../fe_banshisenko_ikusei_sim.json`）；找不到再用內建瀏覽器的 `get_page_text` / `javascript_tool` 讀已渲染的頁面。
+- 請子代理查資料時，要求它回傳**原始數字與網址**，不要只給摘要；數值交叉比對後再採用。
+
+## 尚未解決的問題（由重要到次要）
+
+找到證據時更新 `references/conflicts.md`，並依 `fe-data-update` / `fe-growth-engine` 修改程式。
+
+1. 坐騎友好 Lv1–4 每一級加在哪一項（尤其馬系的成長分配）。有了才能做「友好度等級」選項。
+2. 戰車兵之道／戰象兵之道：成長率從幾級開始、每次加多少。已知一筆：馬吉迪後期的戰車兵職業成長為 HP20 力20 魔0 速0 技25 防30 魔防5 運10 魅20（基礎為 HP10 力5 魔-5 速-5 技15 防10 魔防0 運5 魅10）。
+3. 戰車兵的坐騎**能力**加成是否也 ×2。
+4. 羅西南的 Lv5 成長加成、紅聖飛馬的能力與成長加成。
+5. 坐騎種類：redfreshet 說有 28 種，目前只收錄 19 種；象系沒有可捕獲的資料。
+6. 能力上限（game8 的上限欄位全空）。
+7. `references/conflicts.md` 中各職業的速度／技巧對調：需要遊戲內職業畫面截圖才能定案。
+8. 最上級、神將職與 7 名角色（貝特蘭、內森、齊利科、安娜、亞絲望、塔霍尼雅、庫拉普卡）的繁中正式名稱。
 
 ## 研究坐騎時要記得
 

@@ -18,6 +18,7 @@
 node tools/build-data.mjs --refresh   # 重新下載 game8 資料並產生 data.js
 node tools/test-calc.mjs              # 驗證計算（含與 game8 計算器輸出逐值比對）
 node tools/serve.mjs                  # 本機預覽 http://localhost:8765/
+node tools/stamp-assets.mjs           # 發布前更新 index.html 的 ?v= 版本參數（依檔案內容雜湊）
 ```
 
 - `calc.js`：計算核心（瀏覽器與 Node 共用）

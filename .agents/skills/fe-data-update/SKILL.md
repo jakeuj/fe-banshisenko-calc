@@ -47,6 +47,36 @@ description: 更新《萬紫千紅》培養計算器的遊戲資料（data.js）
 
 名稱與坐騎資料要去哪裡查，見 `fe-research` 技能。
 
+### 不會出警告、要自己檢查的項目
+
+`build-data.mjs` 不會對陣營名與得意/苦手技能名發出警告（缺了只會顯示日文，或把角色歸到「其他（招募）」）。重抓資料後跑一次：
+
+```bash
+node --input-type=module -e "import { FACTION_ZH, SKILL_ZH } from './tools/names-zh.mjs'; import { readFileSync } from 'node:fs'; const j = JSON.parse(readFileSync('tools/raw/game8.json', 'utf8')); const rows = j.find((t) => t.id === 23026).db_data.filter((r) => r.col_20); console.log('缺陣營中文：', [...new Set(rows.map((r) => r.col_2).filter((f) => f && !FACTION_ZH[f]))].join('、') || '無'); console.log('缺技能中文：', [...new Set(rows.flatMap((r) => [r.col_12, r.col_14]).filter(Boolean).flatMap((s) => s.split(':')).filter((s) => s && !SKILL_ZH[s]))].join('、') || '無');"
+```
+
+## 寫死在程式裡、要一起維護的地方
+
+資料變動時，下面這些不會自動跟著變：
+
+| 位置 | 內容 | 什麼時候要改 |
+|---|---|---|
+| `build-data.mjs` 的 `noMount` | 不能轉騎乘/飛行的角色（オルヘル、ゴライアス）| 新角色的個人技能寫著「騎兵や飛行の兵種になれない」之類的限制時 |
+| `build-data.mjs` 的 `special` 判定 | 上級職裡額外算「特殊解鎖」的 `踊り子`、`鍛冶師`、`戦象兵` | game8 新增有特殊解鎖條件、但解鎖欄位是空的職業時 |
+| `build-data.mjs` 的性別 | 救世主（`性別` 欄空白）特判為「男/女」| 新增可選性別的角色時 |
+| `app.js` 的 `AVAIL_ZH` | 坐騎取得方式的中文說明 | `mounts.mjs` 新增 `avail` 類型時（同時要在 `ROUTES` 設定哪些路線可取得）|
+| `app.js` 的 `issuesFor()` | 戰車兵、戰象兵的提示文字 | 新增有坐騎倍率或特殊成長規則的職業時 |
+| `app.js` 推薦面板 | 「包含特殊解鎖職（…）」的職業清單文字 | 特殊解鎖職有增減時 |
+| `app.js` 的 `renderHelp()` | 說明頁的職業↔坐騎清單、坐騎規則、資料來源 | `CLASS_MOUNT_TYPE`、坐騎規則或來源改變時 |
+| `tools/test-calc.mjs`「資料筆數」 | 寫死職業 60、坐騎 19 | game8 增減職業、或 `mounts.mjs` 增減坐騎時 |
+
+### 日文名就是 id
+
+角色、職業的 id 直接用 game8 的日文名（`title`），使用者瀏覽器裡存的路線（`state.plans`）與資料校正（`state.overrides`）都靠它對應。game8 如果改了某個職業/角色的日文名：
+
+- 使用者已存的路線裡那一段會找不到職業，成長率只剩個人值（頁面不會壞，但數字會錯）。
+- 要同步改 `names-zh.mjs`、`mounts.mjs`、`CORRECTIONS` 的鍵；並考慮在 `app.js` 載入狀態時把舊名換成新名（見 `fe-growth-engine` 的「狀態結構變更」）。
+
 ## 名稱規則（為什麼這樣定）
 
 - 角色名優先採用繁中社群試算表「角色招募表」（它是玩家對照繁中版遊戲整理的），其次是巴哈姆特/GNN 繁中文章，最後才是簡中 wiki 轉繁體（標 `t: true`，頁面會顯示「暫譯」）。

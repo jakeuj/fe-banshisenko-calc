@@ -18,6 +18,12 @@ push 會公開發布內容，使用者沒有明確要求發布時先確認再做
    node tools/test-calc.mjs
    ```
    若這次有改資料來源（names/mounts/build-data），先依 `fe-data-update` 重新產生 `data.js`；`data.js` 必須和工具腳本一起提交，因為線上版只讀 `data.js`。
+   然後更新 `index.html` 的版本參數（依各檔內容雜湊產生 `?v=xxxxxxxx`，檔案沒變就不會變）：
+   ```bash
+   node tools/stamp-assets.mjs
+   node tools/stamp-assets.mjs --check
+   ```
+   只要 `style.css`、`data.js`、`calc.js`、`app.js` 有改，就一定要做這步並一起提交 `index.html`，否則使用者可能拿到快取的舊檔。
 2. **看要提交什麼**
    ```bash
    git status --short
@@ -29,17 +35,24 @@ push 會公開發布內容，使用者沒有明確要求發布時先確認再做
    ```bash
    git push
    ```
-5. **等 Pages 建置完成**（通常 30–60 秒）
+5. **等 Pages 建置完成**（每次 push 會觸發 `pages-build-deployment` workflow，約 25 秒）。Claude Code 的 Bash 不允許前景 `sleep`，所以用 `gh run watch` 等待，不要寫 sleep 迴圈：
    ```bash
-   for i in $(seq 1 20); do s=$(gh api repos/jakeuj/fe-banshisenko-calc/pages/builds/latest --jq .status); echo "$s"; [ "$s" = built ] || [ "$s" = errored ] && break; sleep 10; done
+   id=$(gh run list -R jakeuj/fe-banshisenko-calc -w pages-build-deployment -c "$(git rev-parse HEAD)" -L 1 --json databaseId --jq '.[0].databaseId')
+   gh run watch "$id" -R jakeuj/fe-banshisenko-calc --exit-status
    ```
-   `errored` 時用 `gh api repos/jakeuj/fe-banshisenko-calc/pages/builds/latest` 看錯誤訊息。
+   剛 push 完 `id` 可能還是空的（workflow 尚未建立）：隔幾秒再執行第一行。失敗時看 `gh run view "$id" -R jakeuj/fe-banshisenko-calc --log-failed`，或 `gh api repos/jakeuj/fe-banshisenko-calc/pages/builds/latest` 的錯誤訊息。
 6. **驗證線上版**
    ```bash
    for f in "" data.js calc.js app.js style.css; do curl -sL -o /dev/null -w "%{http_code} %{size_download} $f\n" "https://fe-banshisenko-calc.jakeuj.com/$f"; done
    ```
    全部 200 且大小與本機檔案相近才算完成。可用內建瀏覽器打開網址，確認 `window.FE_DATA` 與 `window.FECalc` 存在、console 無錯誤；在沒有本機設定的情況下，索緋雅預設路線的合計應為 93 / 134 / 194 / 241 / 463。
 7. 回報：提交內容、網址、驗證結果。GitHub Pages 的 CDN 可能快取約 10 分鐘，使用者看到舊版時請他強制重新整理。
+   - 靜態檔帶有內容雜湊版本參數，所以不會出現「新 `app.js` 配舊 `data.js`」；但 `index.html` 本身仍可能被快取約 10 分鐘，這段期間使用者看到的是完整的舊版。
+   - 新增要在 `index.html` 引用的 `.js` / `.css` 檔時，照一般寫法 `src="xxx.js"` 即可，`stamp-assets.mjs` 會自動補上版本參數。
+
+## 公開 repo 會一起公開的東西
+
+Pages 發布整個 `main` 根目錄（有 `.nojekyll`，點開頭的資料夾也會被發布），所以 `.agents/skills/`、`tools/`、`README.md` 都能從網址直接讀到。不要把個人資料、token、私人筆記放進 repo；`tools/raw/`（game8 原始 JSON）已被 gitignore，不要改成提交它。
 
 ## 其他情況
 
