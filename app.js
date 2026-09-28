@@ -350,15 +350,17 @@
     if (u.corrected) tags.push(`<span class="tag acc" title="${esc(correctionText('unit', u))}">成長率已依多個來源修正</span>`);
     if (u.url) tags.push(`<a class="small" href="${esc(u.url)}" target="_blank" rel="noopener">game8 角色頁 ↗</a>`);
     el('unit-panel').innerHTML = `
+      <div class="unit-heading"><span class="eyebrow">UNIT ARCHIVE · 角色檔案</span><strong>${esc(u.zh)}</strong>${u.factionZh ? `<span class="unit-faction">${esc(u.factionZh)}</span>` : ''}</div>
       <div class="unit-top">
         <label class="f"><span>角色</span><select data-bind="unitId">${unitOpts}</select></label>
         ${genderSel}
-        <label class="f"><span>所在路線（決定可用坐騎）</span><select data-bind="route">${routeOpts}</select></label>
+        <label class="f unit-route"><span>所在路線（決定可用坐騎）</span><select data-bind="route">${routeOpts}</select></label>
         <label class="check"><input type="checkbox" data-bind="showAllMounts"${state.showAllMounts ? ' checked' : ''}> 顯示所有坐騎（忽略路線限制）</label>
       </div>
-      <div class="unit-info">${info.join('')}${tags.length ? `<div>${tags.join(' ')}</div>` : ''}${
+      ${tags.length ? `<div class="unit-tags">${tags.join(' ')}</div>` : ''}
+      <details class="unit-details"><summary>角色成長率與背景資料</summary><div class="unit-info">${info.join('')}${
         u.corrected ? notesHtml([['info', correctionText('unit', u)]]) : ''
-      }</div>`;
+      }</div></details>`;
   }
   const joinSourceZh = (j) => (j && j.source && j.source !== 'game8' ? j.source + ' ' : 'game8 ');
 
@@ -507,6 +509,31 @@
     if (row.mount && C.mountFits(row.cls, row.mount))
       parts.push(`<span class="tag mount">${esc(row.mount.zh)}${row.cls.mountMult > 1 ? ' ×' + row.cls.mountMult : ''}</span>`);
     return parts.join(' ');
+  }
+  function renderOverview(res) {
+    const box = el('overview-panel');
+    const last = res.rows[res.rows.length - 1];
+    if (!last) {
+      box.innerHTML = `
+        <div class="overview-heading"><span class="eyebrow">FINAL PROJECTION · 培養終點</span><h2>尚未設定有效的培養路線</h2></div>
+        <p class="muted">在下方加入培養階段並設定目標等級，就能即時看到最終能力。</p>
+        ${notesHtml(res.errors.map((e) => ['err', e]))}`;
+      return;
+    }
+    const startTotal = res.start.expected.reduce((a, b) => a + b, 0);
+    const stats = last.expected.map((value, k) => {
+      const gain = value - res.start.expected[k];
+      return `<div class="overview-stat"><span class="overview-stat-name">${esc(STAT_ZH[k])}</span><strong>${value}</strong><span class="overview-gain">${gain > 0 ? '+' : ''}${gain}</span></div>`;
+    }).join('');
+    const trail = res.rows.map((row) => `<span>Lv${row.lv} ${esc(row.cls ? row.cls.zh : '—')}</span>`).join('<i aria-hidden="true">◆</i>');
+    box.innerHTML = `
+      <div class="overview-heading"><span class="eyebrow">FINAL PROJECTION · 培養終點</span><h2>Lv${last.lv} ${esc(last.cls ? last.cls.zh : '—')}</h2>
+        ${last.mount && C.mountFits(last.cls, last.mount) ? `<span class="tag mount">${esc(last.mount.zh)}</span>` : ''}</div>
+      <div class="overview-main"><div class="overview-total"><span>預測能力合計</span><strong>${last.total}</strong><small>起點 ${startTotal}　<span class="overview-gain">${last.total - startTotal >= 0 ? '+' : ''}${last.total - startTotal}</span></small></div>
+        <div class="overview-stats">${stats}</div></div>
+      <div class="overview-trail" aria-label="培養階段">${trail}</div>
+      ${res.errors.length ? notesHtml(res.errors.map((e) => ['err', e])) : ''}
+      <a class="overview-link" href="#result-panel">查看完整預測與機率區間 ↓</a>`;
   }
   function renderResults(res) {
     const [qa, qb, qLabel] = INTERVALS[state.interval] || INTERVALS.q25;
@@ -954,6 +981,7 @@
     renderStart();
     renderPlan();
     const res = computeProjection();
+    renderOverview(res);
     renderResults(res);
     renderJudge(res);
   }
@@ -973,6 +1001,7 @@
   function refreshPlanOutputs(opts) {
     opts = opts || {};
     const res = computeProjection();
+    renderOverview(res);
     renderResults(res);
     if (opts.judgeOnly) renderJudgeOut(res);
     else renderJudge(res);
