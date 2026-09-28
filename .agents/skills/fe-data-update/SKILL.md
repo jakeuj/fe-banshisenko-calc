@@ -1,6 +1,6 @@
 ---
 name: fe-data-update
-description: 更新《萬紫千紅》培養計算器的遊戲資料（data.js）。當使用者說 game8 資料更新了、要重抓資料、新增角色/職業/坐騎、補中文名稱、修正某個成長率或補正值、build-data 出現警告、或任何會動到 tools/build-data.mjs、tools/names-zh.mjs、tools/mounts.mjs、data.js 的需求時，都要使用這個技能——即使使用者只說「幫我更新一下資料」或「某角色數值不對」。
+description: 更新《萬紫千紅》培養計算器的遊戲資料（data.js）。當使用者說 game8 資料更新了、要重抓資料、「看看有沒有資料需要更新」、新增角色/職業/坐騎、補中文名稱、修正某個成長率或補正值、回報遊戲內看到的成長值、build-data 出現警告、或任何會動到 tools/build-data.mjs、tools/names-zh.mjs、tools/mounts.mjs、data.js 的需求時，都要使用這個技能——即使使用者只說「幫我更新一下資料」或「某角色數值不對」。
 ---
 
 # 更新遊戲資料（data.js）
@@ -13,7 +13,25 @@ description: 更新《萬紫千紅》培養計算器的遊戲資料（data.js）
 | 手工對照表 | 日文 → 繁中名稱、陣營名、階級、技能名 | `tools/names-zh.mjs` |
 | 手工坐騎表 | 坐騎能力/成長加成、職業↔坐騎類型、路線可取得性 | `tools/mounts.mjs` |
 
-資料修正（game8 與遊戲不符時）寫在 `tools/build-data.mjs` 的 `CORRECTIONS` 陣列，每筆都要附 `why`（證據來源），頁面「說明」與職業提示會直接顯示它。
+資料修正（game8 與遊戲不符時）寫在 `tools/build-data.mjs` 的 `CORRECTIONS` 陣列：職業用 `{ cls: '日文名', … }`、角色用 `{ unit: '日文名', … }`，每筆都要附 `why`（證據來源），頁面「說明」、職業提示與角色面板會直接顯示它。
+
+game8 沒有加入資料的角色，可在 `build-data.mjs` 的 `EXTRA_JOIN` 補上（`base` 為**不含職業補正**的能力值，產生時自動加上該職業補正；`source` 會顯示在「套用預設加入資料」按鈕上）。game8 之後若補了資料，build 會警告，屆時把該筆刪掉。
+
+## 先檢查有沒有東西要更新
+
+使用者問「看看有沒有資料需要更新」、或給了新的參考網址／截圖時，先跑唯讀檢查，不要直接 `--refresh`：
+
+```bash
+node tools/check-sources.mjs
+```
+
+- **game8.jp**：線上 JSON 與 `tools/raw/game8.json` 快取逐格比對。「完全相同」就不用重抓；有變動才走下面的標準流程。
+- **game8.co 成長率頁**（archives/618974）：角色與職業成長率和目前 `data.js` 比對，會標出「已由 CORRECTIONS 修正」與「全部差同一個數（個人技能加成，如穆 +20）」。其餘差異逐一對照 `fe-research/references/conflicts.md`；**已記錄的就是已知衝突，不要重改**，沒記錄過的才交給 `fe-research` 研究。
+- 出現「對不到日文名」時，在 `names-zh.mjs` 的 `EN_UNIT` / `EN_CLASS` 補上英文名 → 日文名。
+- 需要時再比對騰訊文件社群表：`node .agents/skills/fe-research/scripts/qq-sheet.mjs compare`（角色成長、職業成長與補正、坐騎、戰車）。它和簡中 wiki 大致同源，結果同樣先對照 `conflicts.md`；請求會被限流，不要短時間內重跑很多次。對不到名稱時補 `names-zh.mjs` 的 `CN_UNIT` / `CN_CLASS` / `CN_MOUNT`。
+- 使用者給的圖片或表格：先依 `fe-research` 的「使用者提供的截圖／表格」判斷來源，和 `mounts.mjs`、`conflicts.md` 逐項比對，只補真正缺的欄位。
+
+檢查完在 `conflicts.md` 更新「最近一次比對」那一行（日期、比對了哪些來源、結果）。
 
 ## 標準流程
 
@@ -64,11 +82,15 @@ node --input-type=module -e "import { FACTION_ZH, SKILL_ZH } from './tools/names
 | `build-data.mjs` 的 `noMount` | 不能轉騎乘/飛行的角色（オルヘル、ゴライアス）| 新角色的個人技能寫著「騎兵や飛行の兵種になれない」之類的限制時 |
 | `build-data.mjs` 的 `special` 判定 | 上級職裡額外算「特殊解鎖」的 `踊り子`、`鍛冶師`、`戦象兵` | game8 新增有特殊解鎖條件、但解鎖欄位是空的職業時 |
 | `build-data.mjs` 的性別 | 救世主（`性別` 欄空白）特判為「男/女」| 新增可選性別的角色時 |
+| `mounts.mjs` 的 `CHARIOT_CLASSES` / `CHARIOT_STAGES` | 有戰車加成的職業（戦車兵）與各階段成長加成 | 找到戰車升級時機、初始戰車確切數值，或戰象兵之道的資料時 |
 | `app.js` 的 `AVAIL_ZH` | 坐騎取得方式的中文說明 | `mounts.mjs` 新增 `avail` 類型時（同時要在 `ROUTES` 設定哪些路線可取得）|
 | `app.js` 的 `issuesFor()` | 戰車兵、戰象兵的提示文字 | 新增有坐騎倍率或特殊成長規則的職業時 |
 | `app.js` 推薦面板 | 「包含特殊解鎖職（…）」的職業清單文字 | 特殊解鎖職有增減時 |
 | `app.js` 的 `renderHelp()` | 說明頁的職業↔坐騎清單、坐騎規則、資料來源 | `CLASS_MOUNT_TYPE`、坐騎規則或來源改變時 |
 | `tools/test-calc.mjs`「資料筆數」 | 寫死職業 60、坐騎 19 | game8 增減職業、或 `mounts.mjs` 增減坐騎時 |
+| `names-zh.mjs` 的 `EN_UNIT` / `EN_CLASS` | 英文名 → 日文名（`check-sources.mjs` 比對 game8.co 用）| game8 新增角色／職業時；`check-sources.mjs` 會列出對不到的英文名 |
+| `names-zh.mjs` 的 `CN_UNIT` / `CN_CLASS` / `CN_MOUNT` | 簡中名 → 日文名／坐騎 id（`qq-sheet.mjs` 比對騰訊文件表用，簡中 wiki 同名）| 新增角色／職業／坐騎時；`qq-sheet.mjs` 會列出對不到的簡中名 |
+| `qq-sheet.mjs` 的 `GUESTS` | 騰訊文件表有、但 data.js 沒有的客串角色（索雷爾、歐若拉）| 表上新增其他客串角色時 |
 
 ### 日文名就是 id
 
@@ -95,7 +117,13 @@ node --input-type=module -e "import { FACTION_ZH, SKILL_ZH } from './tools/names
 
 ## 什麼時候加 CORRECTIONS
 
-只有在有**比 game8 更強的證據**時才修正 game8 的數值：遊戲截圖、或多個獨立來源一致而 game8 單獨不同。只有一個來源不同時，不要改預設值——使用者可以在頁面「資料／校正」自行覆寫。新增修正後 `node tools/test-calc.mjs` 可能需要同步更新依賴該職業的測試。
+只有在有**比 game8 更強的證據**時才修正 game8 的數值：
+
+1. **遊戲內截圖／實測**（含使用者回報遊戲畫面上的成長值）：最強，就算 game8.jp 與 game8.co 一致也照實測改。例：哪吒當劍客（職業力 +0）時力量成長顯示 45 → 個人力 = 45，推翻 game8 的 55。換算方法見 `fe-research` 的「使用者回報遊戲內數值時」。
+2. 沒有實測時，game8.jp 是**唯一**不同的來源（連 game8.co 都與它不同，而其他多個來源一致）。
+3. game8.jp 與 game8.co 相同、另一邊也有多個來源時，兩邊都有證據，維持 game8.jp 並記在 `fe-research/references/conflicts.md`。只有一個來源不同時，不要改預設值——使用者可以在頁面「資料／校正」自行覆寫。
+
+`why` 的寫法：有實測時以「遊戲內實測：…」開頭，寫出角色、職業、看到的數字與換算，再列其他一致的來源；頁面會原文顯示給使用者。已經有 CORRECTIONS、後來才拿到實測時，只改 `why` 並在 `conflicts.md` 補上證據。新增修正後 `node tools/test-calc.mjs` 的「資料修正」測試要一起更新。
 
 ## 欄位對照
 
