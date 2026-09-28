@@ -1,0 +1,7 @@
+# game8 原始資料快取（build-data.mjs 會自動下載）
+tools/raw/
+# 本機預覽設定
+.claude/
+node_modules/
+.DS_Store
+Thumbs.db

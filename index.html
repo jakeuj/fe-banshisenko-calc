@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>萬紫千紅 培養計算器</title>
+  <meta name="description" content="聖火降魔錄 萬紫千紅：以目前等級/職業/實際數值為起點，預測轉職路線的期望值與機率區間，含凱伊篇坐騎成長加成與自動推薦。">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <h1>萬紫千紅 培養計算器</h1>
+      <p class="sub">期望值・機率區間・成長判定・坐騎加成・自動推薦｜資料來源 game8 計算器，並加上坐騎</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card" id="unit-panel" aria-label="角色"></section>
+
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-action="tab" data-tab="plan">預測與判定</button>
+      <button role="tab" data-action="tab" data-tab="rec">自動推薦</button>
+      <button role="tab" data-action="tab" data-tab="data">資料／校正</button>
+      <button role="tab" data-action="tab" data-tab="help">說明</button>
+    </nav>
+
+    <div class="tab-page" data-page="plan">
+      <section class="card" id="start-panel" aria-label="起點"></section>
+      <section class="card" id="plan-panel" aria-label="培養路線"></section>
+      <section class="card" id="result-panel" aria-label="預測結果"></section>
+      <section class="card" id="judge-panel" aria-label="成長判定"></section>
+    </div>
+
+    <div class="tab-page" data-page="rec">
+      <section class="card" id="rec-panel" aria-label="自動推薦"></section>
+    </div>
+
+    <div class="tab-page" data-page="data">
+      <section class="card" id="data-panel" aria-label="資料校正"></section>
+    </div>
+
+    <div class="tab-page" data-page="help">
+      <section class="card prose" id="help-panel" aria-label="說明"></section>
+    </div>
+  </main>
+
+  <footer class="wrap foot">
+    <span id="data-meta"></span>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="calc.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
