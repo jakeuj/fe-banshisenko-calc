@@ -45,7 +45,7 @@ push 會公開發布內容，使用者沒有明確要求發布時先確認再做
    ```bash
    for f in "" data.js calc.js app.js style.css; do curl -sL -o /dev/null -w "%{http_code} %{size_download} $f\n" "https://fe-banshisenko-calc.jakeuj.com/$f"; done
    ```
-   全部 200 且大小與本機檔案相近才算完成。可用內建瀏覽器打開網址，確認 `window.FE_DATA` 與 `window.FECalc` 存在、console 無錯誤；在沒有本機設定的情況下，索緋雅預設路線的合計應為 93 / 134 / 194 / 241 / 463。
+   全部 200 且大小與本機檔案相近才算完成。可用內建瀏覽器打開網址，確認 console 無錯誤；沒有本機設定時，`#overview-panel` 應顯示 Lv99 賢士、合計 463，索緋雅預設路線的詳細合計應為 93 / 134 / 194 / 241 / 463。若瀏覽器的只讀頁面沙盒無法讀取 `window.FE_DATA` 或 `window.FECalc`，以實際渲染結果和 console 為準。
 7. 回報：提交內容、網址、驗證結果。GitHub Pages 的 CDN 可能快取約 10 分鐘，使用者看到舊版時請他強制重新整理。
    - 靜態檔帶有內容雜湊版本參數，所以不會出現「新 `app.js` 配舊 `data.js`」；但 `index.html` 本身仍可能被快取約 10 分鐘，這段期間使用者看到的是完整的舊版。
    - 新增要在 `index.html` 引用的 `.js` / `.css` 檔時，照一般寫法 `src="xxx.js"` 即可，`stamp-assets.mjs` 會自動補上版本參數。

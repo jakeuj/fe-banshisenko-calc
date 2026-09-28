@@ -55,6 +55,7 @@ description: 《萬紫千紅》培養計算器的計算公式與程式架構（c
 - `state.plans[unitId] = { gender, start: { lv, classId, mountId, stats, chariot }, segments: [{ toLv, classId, mountId, custom, chariot }], judge: { row, stats } }`——每個角色各自一份。`chariot` 只對戰車兵有意義，缺少時視為 `initial`。
 - `state.overrides = { units, classes, mounts }`：使用者校正，`buildData()` 會把它套到 `BASE` 的深拷貝得到 `D`。改完校正要重新 `buildData()` 再 `renderAll()`。
 - 事件用 `data-bind="路徑"` 與 `data-action="動作"` 做委派。**數字欄位的 `input` 事件只更新結果區（`refreshPlanOutputs`、`renderJudgeOut`、`refreshRecOut`），不要重建正在輸入的欄位**，否則使用者一打字就失去焦點；`change`（下拉、勾選、離開欄位）才重建整個面板。
+- 預測頁最前方的 `#overview-panel` 由 `renderOverview(res)` 繪製終點合計、九項能力與相對起點的變化；它和詳細結果、成長判定共用同一次 `computeProjection()` 的 `res`。調整預測輸出時，同步檢查 `renderPlanTab()` 與 `refreshPlanOutputs()`，確保摘要即時更新且輸入欄位不失焦；沒有有效路線時顯示空狀態。摘要不另存進 localStorage。
 - 新增表單欄位時：給 `data-bind`，在 `onBind` 的對應 case 更新狀態，決定是輕量更新還是整塊重建。
 - `defaultPlan(unit)`：有 game8 加入資料時用加入的 Lv/職業/顯示值當起點；沒有（內森、齊利科等第 2・3 部角色）則是 Lv1 平民、全 0，頁面會提示手動輸入。
 - `recRoute(unit, start)`：「套用 game8 推薦路線」按鈕的邏輯——起點已超過的階級直接換成該階最高的推薦職業（與 game8 相同），之後到各推薦職業的 `recLv` 再換職，最後一段到 Lv99。
@@ -88,7 +89,7 @@ node tools/test-calc.mjs
 node tools/serve.mjs
 ```
 
-打開 http://localhost:8765/ ，確認 console 沒有錯誤、手機寬度（375px）沒有橫向捲動、四個分頁都能切換。這台 Windows 機器上 `python -m http.server` 會斷線，請用 `tools/serve.mjs`。
+打開 http://localhost:8765/ ，確認 console 沒有錯誤、手機寬度（375px）沒有整頁橫向捲動（寬表格可在表格內捲動）、四個分頁都能切換。改動預測頁時，檢查摘要和詳細結果隨起點、路線、推薦套用同步更新，數字輸入保持焦點。這台 Windows 機器上 `python -m http.server` 會斷線，請用 `tools/serve.mjs`。
 
 用 Claude 內建瀏覽器（Browser pane）檢查時：
 
