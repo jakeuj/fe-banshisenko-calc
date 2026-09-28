@@ -98,6 +98,8 @@ node tools/serve.mjs
   ```json
   { "version": "0.0.1", "configurations": [ { "name": "static", "runtimeExecutable": "node", "runtimeArgs": ["tools/serve.mjs", "8766"], "port": 8766 } ] }
   ```
-- `preview_start` 回報「Port 8766 is in use by another chat's dev server」時，是別的對話正在用：不要停掉它，在 `.claude/launch.json` 另加一個設定（例如 `"name": "static-alt"`、`"runtimeArgs": ["tools/serve.mjs", "8767"]`、`"port": 8767`）再啟動。`serve.mjs` 每次都從磁碟讀檔、不快取，所以不同埠看到的都是目前的檔案。
+- `preview_start` 回報「Port 8766 is in use by another chat's dev server」時，是別的對話正在用：不要停掉它。多個對話同時開預覽很常見（`static-alt` 的 8767 也可能被占），最省事的是在 `.claude/launch.json` 加一個自動選埠的設定：`"name": "static-auto"`、`"runtimeArgs": ["tools/serve.mjs"]`（不要寫埠號）、`"port": 8768`、`"autoPort": true`。`serve.mjs` 的埠號優先順序是命令列參數 → 環境變數 `PORT` → 8765，所以不給參數時會用預覽工具分配的 `PORT`。`serve.mjs` 每次都從磁碟讀檔、不快取，所以不同埠看到的都是目前的檔案。
 - 用 `resize_window` 模擬手機後，分頁偶爾會卡住（所有指令逾時），這不是程式問題；關掉分頁、用 `tabs_create` 開新分頁再 `navigate` 即可。
+- 要重新載入頁面時用 `navigate` 到同一個網址。不要在 `javascript_tool` 裡寫 `location.reload()` 再 `await`：頁面卸載後腳本永遠等不到結果，會逾時 45 秒，之後幾個指令也可能跟著逾時。
+- Browser pane 被隱藏時 `screenshot` 可能逾時。檢查數值、版面寬度改用 `find`、`get_page_text` 或同步的 `javascript_tool`（例如 `document.documentElement.scrollWidth > innerWidth`）。
 - 測試時會改到預覽分頁的 localStorage；測完可執行 `localStorage.removeItem('fe-bsk-calc-v1')` 還原成預設狀態。
