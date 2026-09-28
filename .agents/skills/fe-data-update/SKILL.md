@@ -125,6 +125,17 @@ node --input-type=module -e "import { FACTION_ZH, SKILL_ZH } from './tools/names
 
 `why` 的寫法：有實測時以「遊戲內實測：…」開頭，寫出角色、職業、看到的數字與換算，再列其他一致的來源；頁面會原文顯示給使用者。已經有 CORRECTIONS、後來才拿到實測時，只改 `why` 並在 `conflicts.md` 補上證據。新增修正後 `node tools/test-calc.mjs` 的「資料修正」測試要一起更新。
 
+### 實測與資料一致時
+
+不加 CORRECTIONS，但證據要留下來，否則下次比對腳本列出差異時又要重查：
+
+1. `fe-research/references/conflicts.md` 的「遊戲內已確認與 game8 一致」表加一列（角色／職業、值、日期與畫面欄位、其他來源的錯誤）。原本沒有爭議的項目也要記。
+2. 實測剛好驗證到某筆既有 CORRECTIONS（例：皮特魯的戰車兵「兵種」欄技 +15 → `戦車兵` dex 修正）時，把 `why` 改成「遊戲內實測：…」開頭。
+3. 在 `tools/test-calc.mjs` 加一個用畫面數字寫成的實例測試（參考「皮特魯 Lv26 + 戰車兵 + 汗血馬」「凱伊 + 榮光騎士 + 野生馬」），之後改資料或公式時會自動擋下回歸。
+4. `node tools/build-data.mjs`（不用 `--refresh`）重新產生，確認 `git diff data.js` 只動到 `why` 文字，再跑 `node tools/test-calc.mjs`。只改說明文字時不用開本機預覽。
+
+技能檔的實體在 `.agents/skills/`（`.claude/skills` 是指向它的連結），改技能時直接改 `.agents/skills/` 下的檔案。
+
 ## 欄位對照
 
 game8 JSON 的表格 ID 與 `col_N` 意義、以及欄位是否被 game8 改動過的錨點檢查，見 `references/game8-columns.md`。改 `build-data.mjs` 的欄位讀取前一定要先看。

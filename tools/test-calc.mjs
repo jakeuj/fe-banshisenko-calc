@@ -86,6 +86,18 @@ test('馬吉迪 + 戰車兵 + 多輪升級後戰車 + 汗血馬 = 玩家實測 H
   assert.equal(r.rows[0].growth[0], 95);
 });
 
+test('皮特魯 Lv26 + 戰車兵 + 汗血馬 = 遊戲內成長畫面（基本值／兵種／賦予）', () => {
+  const u = unit('ピーテル');
+  const c = cls('戦車兵');
+  const m = mount('kanketsu');
+  // 遊戲畫面各欄（HP 力 魔 速 技 防 魔防 運 魅）
+  assert.deepEqual(u.growth, [40, 35, 20, 45, 60, 30, 25, 35, 30]); // 基本值
+  assert.deepEqual(c.growth, [10, 5, -5, -5, 15, 10, 0, 5, 10]); // 兵種（技 +15 = 已修正值）
+  assert.deepEqual(m.growth.map((v) => v * C.mountGrowthMult(c, m)), [10, 10, 0, 0, 10, 20, 0, 0, 0]); // 賦予 = 汗血馬 ×2
+  const none = D.chariotStages.find((x) => x.id === 'none').growth;
+  assert.deepEqual(C.effectiveGrowth(u, c, m, null, none), [60, 50, 15, 40, 85, 60, 25, 40, 40]);
+});
+
 test('資料修正：多來源一致、只有 game8.jp 不同的值', () => {
   assert.equal(cls('軽騎兵').growth[4], 0);
   assert.deepEqual([cls('騎甲駝兵').growth[3], cls('騎甲駝兵').growth[4]], [10, 5]);

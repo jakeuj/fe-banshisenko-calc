@@ -34,7 +34,7 @@ const CORRECTIONS = [
   { cls: 'バーディンガー', field: 'growth', stat: 'dex', to: 0,
     why: 'game8.jp 凱伊（バーディンガー）遊戲截圖技巧成長 45 = 個人 45 + 職業 0；game8.co 亦為 0。' },
   { cls: '戦車兵', field: 'growth', stat: 'dex', to: 15,
-    why: 'game8.co、繁中社群表、簡中 wiki、騰訊文件表皆為 +15；game8.jp 的 +25 疑似含「戰車兵之道」的戰車加成。' },
+    why: '遊戲內實測：皮特魯 Lv26 戰車兵（配汗血馬）成長畫面的「兵種」欄技巧為 +15（基本值 60、賦予 10）；game8.co、繁中社群表、簡中 wiki、騰訊文件表亦為 +15；game8.jp 的 +25 疑似含「戰車兵之道」的戰車加成。' },
   { cls: '軽騎兵', field: 'growth', stat: 'dex', to: 0,
     why: 'game8.co、繁中社群表、簡中 wiki、騰訊文件社群表皆為 0，只有 game8.jp 為 +5。' },
   { cls: '騎甲駝兵', field: 'growth', stat: 'spd', to: 10, why: G8CO_CN + '（game8.jp 為 +15）' },
