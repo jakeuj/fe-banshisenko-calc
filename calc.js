@@ -6,6 +6,7 @@
  *   顯示值 = 內部值 + 職業補正 + 坐騎能力加成（兩者都只在該職業/騎乘時生效）
  *   期望顯示值 = round(E[內部值] + 1e-7) + 補正
  *   倍率：坐騎類型與職業相符時為 1，戰車兵為 2；不符或步行職業為 0。
+ *   戰車兵另有「戰車」本身的成長加成（戰車兵之道），以 bonus 陣列加在成長率上。
  */
 (function (root, factory) {
   const api = factory();
@@ -30,7 +31,8 @@
   }
 
   // ── 成長率與補正 ──
-  function effectiveGrowth(unit, cls, mount, custom) {
+  // bonus：職業附帶的額外成長加成（目前只有戰車兵的戰車），不是戰車兵時呼叫端傳 null
+  function effectiveGrowth(unit, cls, mount, custom, bonus) {
     const mult = mountGrowthMult(cls, mount);
     const g = [];
     for (let k = 0; k < N; k++) {
@@ -38,7 +40,8 @@
         unit.growth[k] +
           (cls ? cls.growth[k] : 0) +
           (mult ? mult * mount.growth[k] : 0) +
-          (custom ? Number(custom[k]) || 0 : 0)
+          (custom ? Number(custom[k]) || 0 : 0) +
+          (bonus ? Number(bonus[k]) || 0 : 0)
       );
     }
     return g;
@@ -103,8 +106,8 @@
   /**
    * 預測
    * @param unit      角色資料
-   * @param start     { lv, cls, mount, displayed[9] }（cls/mount 為物件）
-   * @param segments  [{ toLv, cls, mount, custom[9] }]，toLv 遞增
+   * @param start     { lv, cls, mount, displayed[9], bonus? }（cls/mount 為物件）
+   * @param segments  [{ toLv, cls, mount, custom[9], bonus? }]，toLv 遞增（bonus＝戰車加成等）
    * @returns { start: row, rows: [row], errors: [] }
    *   row = { lv, cls, mount, growth[9](有效成長率), mod[9], base[9](起點內部值), pmf[9], mean[9](內部期望),
    *           expected[9](期望顯示值), total }
@@ -124,7 +127,9 @@
         total: Math.round(mean.reduce((a, b) => a + b, 0) + 1e-7) + mod.reduce((a, b) => a + b, 0),
       };
     };
-    const startRow = mkRow(start.cls, start.mount, effectiveGrowth(unit, start.cls, start.mount, null));
+    const startRow = Object.assign(mkRow(start.cls, start.mount, effectiveGrowth(unit, start.cls, start.mount, null, start.bonus)), {
+      seg: start,
+    });
     const rows = [];
     for (const seg of segments) {
       const to = Number(seg.toLv);
@@ -133,7 +138,7 @@
         errors.push(`Lv${to} 低於前一段的 Lv${lv}`);
         continue;
       }
-      const g = effectiveGrowth(unit, seg.cls, seg.mount, seg.custom);
+      const g = effectiveGrowth(unit, seg.cls, seg.mount, seg.custom, seg.bonus);
       const levels = to - lv;
       const next = pmfs.map((p, k) => {
         let cur = p;
@@ -142,7 +147,7 @@
       });
       pmfs = next;
       lv = to;
-      rows.push(Object.assign(mkRow(seg.cls, seg.mount, g), { levels }));
+      rows.push(Object.assign(mkRow(seg.cls, seg.mount, g), { levels, seg }));
     }
     return { start: startRow, rows, errors };
   }
@@ -225,14 +230,14 @@
   }
 
   /** 對某職業找最佳坐騎（per-level 加權收益 + 可選的最終顯示加成權重） */
-  function bestMountFor(unit, cls, mounts, weights, levels, finalStage) {
+  function bestMountFor(unit, cls, mounts, weights, levels, finalStage, bonus) {
     const candidates = [null];
     if (cls.mountType && cls.mountType !== 'elephant') {
       for (const m of mounts) if (m.type === cls.mountType) candidates.push(m);
     }
     let best = null;
     for (const m of candidates) {
-      const g = effectiveGrowth(unit, cls, m, null);
+      const g = effectiveGrowth(unit, cls, m, null, bonus);
       const per = weightedPerLevel(g, weights);
       const fin = finalStage ? weightedSum(displayMod(cls, m), weights) : 0;
       const score = per * levels + fin;
@@ -245,7 +250,8 @@
    * @param opts {
    *   unit, startLv, startCls, targetLv, weights[9],
    *   tierLv: {1,2,3,4,5}（各階可轉職的等級）, maxTier, includeSpecial, includeDivine,
-   *   mounts: 可用坐騎陣列, finalClassId, gender, topN, perStage
+   *   mounts: 可用坐騎陣列, finalClassId, gender, topN, perStage,
+   *   classBonus: (cls) => 額外成長陣列或 null（戰車兵的戰車加成）
    * }
    */
   function recommend(data, opts) {
@@ -257,6 +263,7 @@
     const mounts = opts.mounts || [];
     const tierLv = opts.tierLv || { 1: 5, 2: 20, 3: 35, 4: 45, 5: 60 };
     const maxTier = opts.maxTier || 4;
+    const bonusFor = (c) => (opts.classBonus ? opts.classBonus(c) : null);
 
     // 階段切點
     const cuts = new Set([startLv, targetLv]);
@@ -290,7 +297,7 @@
       if (opts.startCls && !classes.includes(opts.startCls)) classes.push(opts.startCls);
       if (finalStage && opts.finalClassId) classes = data.classes.filter((c) => c.id === opts.finalClassId);
       const options = classes
-        .map((c) => bestMountFor(unit, c, mounts, weights, levels, finalStage))
+        .map((c) => bestMountFor(unit, c, mounts, weights, levels, finalStage, bonusFor(c)))
         .sort((a, b) => b.score - a.score)
         .slice(0, perStage);
       stages.push({ from, to, levels, finalStage, tierCap, options });
@@ -301,7 +308,7 @@
       let classes = pool.slice();
       if (opts.finalClassId) classes = data.classes.filter((c) => c.id === opts.finalClassId);
       const options = classes
-        .map((c) => bestMountFor(unit, c, mounts, weights, 0, true))
+        .map((c) => bestMountFor(unit, c, mounts, weights, 0, true, bonusFor(c)))
         .sort((a, b) => b.score - a.score)
         .slice(0, perStage);
       stages.push({ from: startLv, to: startLv, levels: 0, finalStage: true, tierCap: 4, options });
@@ -329,7 +336,7 @@
 
     // 成長率排行（不看等級門檻，只看篩選條件）
     const ranking = pool
-      .map((c) => bestMountFor(unit, c, mounts, weights, 1, false))
+      .map((c) => bestMountFor(unit, c, mounts, weights, 1, false, bonusFor(c)))
       .sort((a, b) => b.per - a.per);
 
     return { stages, routes, ranking };

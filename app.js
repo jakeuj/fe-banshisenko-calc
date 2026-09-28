@@ -65,6 +65,7 @@
       ownedOnly: false,
       owned: [],
       showAllRank: false,
+      chariot: 'initial',
     };
   }
   function loadState() {
@@ -184,13 +185,31 @@
   }
 
   // ───────────────────────── 共用片段 ─────────────────────────
-  function correctionText(cls) {
-    const list = (D.meta.corrections || []).filter((c) => c.cls === cls.jp);
+  const statZhOf = (key) => STAT_ZH[BASE.stats.findIndex((s) => s.key === key)];
+  function correctionText(kind, item) {
+    const list = (D.meta.corrections || []).filter((c) => c.kind === kind && c.id === item.jp);
     return list
-      .map((c) => `${cls.zh}的${STAT_ZH[BASE.stats.findIndex((s) => s.key === c.stat)]}成長已由 game8 的 ${signed(c.from)} 修正為 ${signed(c.to)}：${c.why}`)
+      .map((c) => `${item.zh}的${statZhOf(c.stat)}成長已由 game8 的 ${signed(c.from)} 修正為 ${signed(c.to)}：${c.why}`)
       .join('；');
   }
-  function issuesFor(u, gender, cls, mount) {
+  // 戰車兵之道：戰車本身的成長加成（初始／多輪升級後／不計），預設為初始
+  const CHARIOT_DEFAULT = 'initial';
+  const chariotStage = (id) =>
+    D.chariotStages.find((x) => x.id === (id || CHARIOT_DEFAULT)) || D.chariotStages.find((x) => x.id === CHARIOT_DEFAULT);
+  const chariotBonus = (cls, id) => (cls && cls.chariot ? chariotStage(id).growth : null);
+  function chariotSelect(attrs, cls, selectedId) {
+    if (!cls || !cls.chariot) return '';
+    const cur = chariotStage(selectedId).id;
+    return `<label class="f"><span>戰車（戰車兵之道）</span><select ${attrs}>${D.chariotStages
+      .map(
+        (x) =>
+          `<option value="${x.id}"${x.id === cur ? ' selected' : ''}>${esc(x.zh)}${
+            x.id === 'none' ? '' : '｜成長 ' + esc(fmtBonus(x.growth))
+          }${x.verified || x.id === 'none' ? '' : '（未確認）'}</option>`
+      )
+      .join('')}</select></label>`;
+  }
+  function issuesFor(u, gender, cls, mount, chariotId) {
     const out = [];
     if (!cls) return out;
     if (cls.femaleOnly && gender !== '女') out.push(['err', `${cls.zh}為女性限定職業`]);
@@ -202,10 +221,16 @@
         if (!mount.verified) out.push(['warn', `「${mount.zh}」的數值未確認：${mount.note}`]);
       }
     }
-    if (cls.jp === '戦車兵')
-      out.push(['info', '戰車兵：坐騎的成長加成 ×2（兩匹馬拉車）。「戰車兵之道」會讓成長率隨等級提高，但公式未公開，可按「✎ 修正」填入遊戲內看到的差額。']);
+    if (cls.chariot) {
+      const st = chariotStage(chariotId);
+      out.push([
+        'info',
+        '戰車兵：坐騎的成長加成 ×2（兩匹馬拉車），另外戰車本身也有成長加成（戰車兵之道）。戰車何時升級未公開，請依遊戲內狀況選「初始戰車」或「多輪升級後」。',
+      ]);
+      if (!st.verified && st.id !== 'none') out.push(['warn', `「${st.zh}」的數值未確認：${st.note}`]);
+    }
     if (cls.jp === '戦象兵') out.push(['info', '戰象兵：沒有可捕獲的象坐騎。「戰象兵之道」會讓成長率隨等級提高，公式未公開，可用「✎ 修正」補差額。']);
-    if (cls.corrected) out.push(['info', correctionText(cls)]);
+    if (cls.corrected) out.push(['info', correctionText('class', cls)]);
     if (cls.overridden) out.push(['info', `${cls.zh}的數值已被你在「資料／校正」中修改`]);
     return out;
   }
@@ -251,15 +276,19 @@
     }
     return html + '</select>';
   }
-  function growthChips(u, cls, mount, custom) {
-    const g = C.effectiveGrowth(u, cls, mount, custom);
+  function growthChips(u, cls, mount, custom, bonus) {
+    const g = C.effectiveGrowth(u, cls, mount, custom, bonus);
     const mult = C.mountGrowthMult(cls, mount);
     const chips = g.map((v, k) => {
       const mb = mult ? mult * mount.growth[k] : 0;
+      const bb = bonus ? bonus[k] : 0;
       const cb = custom ? numv(custom[k]) : 0;
-      const title = `個人 ${u.growth[k]} ＋ 職業 ${cls ? cls.growth[k] : 0}${mb ? ' ＋ 坐騎 ' + mb : ''}${cb ? ' ＋ 自訂 ' + cb : ''}`;
-      const extra = mb || cb ? `<small> (${[mb ? '坐騎' + signed(mb) : '', cb ? '自訂' + signed(cb) : ''].filter(Boolean).join(' ')})</small>` : '';
-      return `<span class="gchip${mb || cb ? ' plus' : ''}" title="${esc(title)}">${SHORT[k]} <b>${v}</b>%${extra}</span>`;
+      const title = `個人 ${u.growth[k]} ＋ 職業 ${cls ? cls.growth[k] : 0}${mb ? ' ＋ 坐騎 ' + mb : ''}${bb ? ' ＋ 戰車 ' + bb : ''}${
+        cb ? ' ＋ 自訂 ' + cb : ''
+      }`;
+      const parts = [mb ? '坐騎' + signed(mb) : '', bb ? '戰車' + signed(bb) : '', cb ? '自訂' + signed(cb) : ''].filter(Boolean);
+      const extra = parts.length ? `<small> (${parts.join(' ')})</small>` : '';
+      return `<span class="gchip${parts.length ? ' plus' : ''}" title="${esc(title)}">${SHORT[k]} <b>${v}</b>%${extra}</span>`;
     });
     const total = g.reduce((a, b) => a + Math.max(0, b), 0);
     return `<div class="growth-line">${chips.join('')}<span class="gchip">合計 <b>${total}</b></span></div>`;
@@ -304,8 +333,11 @@
     const bits = [];
     if (u.factionZh) bits.push(`所屬：${esc(u.factionZh)}`);
     bits.push(`性別：${esc(u.gender || '—')}`);
-    if (u.join) bits.push(`game8 預設加入：Lv${u.join.lv} ${esc(clsOf(u.join.classId) ? clsOf(u.join.classId).zh : u.join.classId)}`);
-    else bits.push('game8 無加入資料（請手動輸入起點）');
+    if (u.join)
+      bits.push(
+        `${joinSourceZh(u.join)}預設加入：Lv${u.join.lv} ${esc(clsOf(u.join.classId) ? clsOf(u.join.classId).zh : u.join.classId)}`
+      );
+    else bits.push('無預設加入資料（請手動輸入起點）');
     if (u.good.length) bits.push(`得意：${esc(u.good.join('・'))}`);
     if (u.weak.length) bits.push(`苦手：${esc(u.weak.join('・'))}`);
     info.push(`<div class="small">${bits.join('　｜　')}</div>`);
@@ -315,6 +347,7 @@
     if (u.zhTentative) tags.push('<span class="tag">中文名暫譯</span>');
     if (u.note) tags.push(`<span class="tag">${esc(u.note)}</span>`);
     if (u.overridden) tags.push('<span class="tag warn">成長率已自訂校正</span>');
+    if (u.corrected) tags.push(`<span class="tag acc" title="${esc(correctionText('unit', u))}">成長率已依多個來源修正</span>`);
     if (u.url) tags.push(`<a class="small" href="${esc(u.url)}" target="_blank" rel="noopener">game8 角色頁 ↗</a>`);
     el('unit-panel').innerHTML = `
       <div class="unit-top">
@@ -323,8 +356,11 @@
         <label class="f"><span>所在路線（決定可用坐騎）</span><select data-bind="route">${routeOpts}</select></label>
         <label class="check"><input type="checkbox" data-bind="showAllMounts"${state.showAllMounts ? ' checked' : ''}> 顯示所有坐騎（忽略路線限制）</label>
       </div>
-      <div class="unit-info">${info.join('')}${tags.length ? `<div>${tags.join(' ')}</div>` : ''}</div>`;
+      <div class="unit-info">${info.join('')}${tags.length ? `<div>${tags.join(' ')}</div>` : ''}${
+        u.corrected ? notesHtml([['info', correctionText('unit', u)]]) : ''
+      }</div>`;
   }
+  const joinSourceZh = (j) => (j && j.source && j.source !== 'game8' ? j.source + ' ' : 'game8 ');
 
   // ───────────────────────── ① 起點 ─────────────────────────
   function startGrowthHtml() {
@@ -337,11 +373,11 @@
     const mod = C.displayMod(cls, m);
     return `
       <div class="small muted" style="margin-top:10px">目前職業＋坐騎的每級成長率（參考用；預測時以下方路線各段的職業計算）</div>
-      ${growthChips(u, cls, m, null)}
+      ${growthChips(u, cls, m, null, chariotBonus(cls, s.chariot))}
       <div class="small muted" style="margin-top:6px">職業補正${m && C.mountFits(cls, m) ? '＋坐騎能力加成' : ''}：${esc(fmtBonus(mod))}　→　扣除後的內部值：${internal
         .map((v, k) => SHORT[k] + v)
         .join(' ')}</div>
-      ${notesHtml(issuesFor(u, genderOf(u, p), cls, m))}`;
+      ${notesHtml(issuesFor(u, genderOf(u, p), cls, m, s.chariot))}`;
   }
   function renderStart() {
     const u = unit();
@@ -355,7 +391,8 @@
         <label class="f"><span>等級</span><input type="number" class="lv" min="1" max="99" data-bind="start.lv" value="${esc(s.lv)}"></label>
         <label class="f"><span>職業</span>${classSelect('data-bind="start.classId"', s.classId, u, genderOf(u, p))}</label>
         <label class="f"><span>坐騎（友好 Lv5）</span>${mountSelect('data-bind="start.mountId"', cls, s.mountId)}</label>
-        <button class="btn" data-action="apply-join"${u.join ? '' : ' disabled'}>套用 game8 預設加入資料${
+        ${chariotSelect('data-bind="start.chariot"', cls, s.chariot)}
+        <button class="btn" data-action="apply-join"${u.join ? '' : ' disabled'}>套用${u.join ? ' ' + esc(joinSourceZh(u.join)) : ' '}預設加入資料${
           u.join ? `（Lv${u.join.lv} ${esc(joinCls ? joinCls.zh : '')}）` : ''
         }</button>
       </div>
@@ -382,7 +419,7 @@
     const m = mountOf(sg.mountId);
     const from = segFrom(i);
     const to = int(sg.toLv, NaN);
-    const issues = issuesFor(u, genderOf(u, p), cls, m);
+    const issues = issuesFor(u, genderOf(u, p), cls, m, sg.chariot);
     if (!Number.isFinite(to)) issues.unshift(['err', '請輸入目標等級']);
     else if (to < from) issues.unshift(['err', `目標 Lv${to} 低於前一段的 Lv${from}，此段會被略過`]);
     else if (to > 99) issues.unshift(['warn', '等級上限為 99']);
@@ -391,13 +428,14 @@
       u,
       cls,
       m,
-      sg.custom
+      sg.custom,
+      chariotBonus(cls, sg.chariot)
     )}${notesHtml(issues)}`;
   }
   function customBox(i) {
     const sg = plan().segments[i];
     return `<div class="custom-box">
-      <div class="small muted">自訂成長修正（%）：加在這一段的成長率上，例如戰車兵之道的等級加成、道具或其他效果。</div>
+      <div class="small muted">自訂成長修正（%）：加在這一段的成長率上，例如坐騎未滿友好 Lv5、道具或其他效果。</div>
       <div class="stat-grid" style="margin-top:6px">${STAT_ZH.map(
         (z, k) =>
           `<label class="f"><span>${z}</span><input type="number" step="5" data-bind="seg.${i}.custom.${k}" value="${esc(sg.custom[k])}"></label>`
@@ -418,6 +456,7 @@
           <label class="f"><span>Lv${segFrom(i)} → 到</span><input type="number" class="lv" min="1" max="99" data-bind="seg.${i}.toLv" value="${esc(sg.toLv)}"></label>
           <label class="f grow"><span>這段期間的職業</span>${classSelect(`data-bind="seg.${i}.classId"`, sg.classId, u, g)}</label>
           <label class="f grow"><span>坐騎（友好 Lv5）</span>${mountSelect(`data-bind="seg.${i}.mountId"`, cls, sg.mountId)}</label>
+          ${chariotSelect(`data-bind="seg.${i}.chariot"`, cls, sg.chariot)}
           <div class="seg-tools">
             <button class="btn small ghost" data-action="custom" data-i="${i}" title="自訂成長修正">${sg.custom ? '✎ 修正中' : '✎ 修正'}</button>
             <button class="btn small ghost" data-action="up" data-i="${i}"${i ? '' : ' disabled'} aria-label="上移">↑</button>
@@ -449,17 +488,22 @@
       cls: clsOf(p.start.classId),
       mount: mountOf(p.start.mountId),
       displayed: p.start.stats.map((v) => int(v)),
+      bonus: chariotBonus(clsOf(p.start.classId), p.start.chariot),
+      chariotId: p.start.chariot,
     };
     const segs = p.segments.map((s) => ({
       toLv: int(s.toLv, NaN),
       cls: clsOf(s.classId),
       mount: mountOf(s.mountId),
       custom: s.custom ? s.custom.map((v) => numv(v)) : null,
+      bonus: chariotBonus(clsOf(s.classId), s.chariot),
+      chariotId: s.chariot,
     }));
     return C.project(u, start, segs);
   }
   function stageLabel(row) {
     const parts = [`<b>Lv${row.lv} ${esc(row.cls ? row.cls.zh : '—')}</b>`];
+    if (row.cls && row.cls.chariot && row.seg) parts.push(`<span class="tag mount">${esc(chariotStage(row.seg.chariotId).zh)}</span>`);
     if (row.mount && C.mountFits(row.cls, row.mount))
       parts.push(`<span class="tag mount">${esc(row.mount.zh)}${row.cls.mountMult > 1 ? ' ×' + row.cls.mountMult : ''}</span>`);
     return parts.join(' ');
@@ -596,6 +640,7 @@
       includeDivine: !!r.includeDivine,
       finalClassId: r.finalClassId || '',
       mounts: recMounts(),
+      classBonus: (c) => chariotBonus(c, r.chariot),
       topN: 5,
     });
   }
@@ -616,9 +661,14 @@
       cls: clsOf(p.start.classId),
       mount: mountOf(p.start.mountId),
       displayed: p.start.stats.map((v) => int(v)),
+      bonus: chariotBonus(clsOf(p.start.classId), p.start.chariot),
     };
     const finals = res.routes.map((rt) => {
-      const proj = C.project(u, start, rt.segments.map((s) => ({ toLv: s.toLv, cls: s.cls, mount: s.mount })));
+      const proj = C.project(
+        u,
+        start,
+        rt.segments.map((s) => ({ toLv: s.toLv, cls: s.cls, mount: s.mount, bonus: chariotBonus(s.cls, r.chariot) }))
+      );
       return proj.rows[proj.rows.length - 1] || proj.start;
     });
     const scoreOf = (last) => last.mean.reduce((a, m, k) => a + (m + last.mod[k]) * w[k], 0);
@@ -719,6 +769,7 @@
       <div class="row" style="margin-top:10px">
         <label class="check"><input type="checkbox" data-bind="rec.includeSpecial"${r.includeSpecial ? ' checked' : ''}> 包含特殊解鎖職（神鴕兵、馭龍兵、遊唱詩人、衛士、遊俠、舞者、重裝騎兵、鍛造師、戰象兵等）</label>
         <label class="check"><input type="checkbox" data-bind="rec.includeDivine"${r.includeDivine ? ' checked' : ''}> 包含神將職</label>
+        ${chariotSelect('data-bind="rec.chariot"', D.classById['戦車兵'], r.chariot).replace('戰車（戰車兵之道）', '戰車兵的戰車加成')}
       </div>
       <details class="box"${r.ownedOnly ? ' open' : ''}>
         <summary>坐騎：${r.ownedOnly ? `只用勾選的 ${r.owned.length} 隻` : `使用目前路線可取得的全部 ${avail.length} 種`}</summary>
@@ -790,7 +841,9 @@
               fmtBonus(m.growth)
             )}</td><td class="l small">${esc(AVAIL_ZH[m.avail] || '')}</td><td class="l small">${esc(m.food)}<br>${esc(m.where)}</td><td class="l small skills">${m.skills
               .map(esc)
-              .join('<br>')}${m.note ? `<br><span class="muted">${esc(m.note)}</span>` : ''}</td><td><button class="btn small ghost" data-action="edit" data-id="${esc(
+              .join('<br>')}${m.release ? `<br><span class="muted">放生可得：${esc(m.release)}</span>` : ''}${
+              m.note ? `<br><span class="muted">${esc(m.note)}</span>` : ''
+            }</td><td><button class="btn small ghost" data-action="edit" data-id="${esc(
               m.id
             )}">編輯</button></td></tr>`
         )
@@ -833,7 +886,10 @@
   // ───────────────────────── 說明 ─────────────────────────
   function renderHelp() {
     const corr = (D.meta.corrections || [])
-      .map((c) => `<li>${esc(c.clsZh)}（${esc(c.cls)}）${esc(STAT_ZH[BASE.stats.findIndex((s) => s.key === c.stat)])}成長 ${signed(c.from)} → ${signed(c.to)}：${esc(c.why)}</li>`)
+      .map(
+        (c) =>
+          `<li>${c.kind === 'unit' ? '角色' : '職業'} ${esc(c.zh)}（${esc(c.id)}）${esc(statZhOf(c.stat))}成長 ${signed(c.from)} → ${signed(c.to)}：${esc(c.why)}</li>`
+      )
       .join('');
     el('help-panel').innerHTML = `
       <h2>怎麼用</h2>
@@ -852,7 +908,7 @@
       </ul>
       <h2>計算公式</h2>
       <ul>
-        <li>每級成長率 = 個人成長率 + 職業成長率 + 坐騎成長加成 ×（戰車兵 2，其他騎乘職 1）+ 自訂修正；低於 0 視為 0。</li>
+        <li>每級成長率 = 個人成長率 + 職業成長率 + 坐騎成長加成 ×（戰車兵 2，其他騎乘職 1）+ 戰車加成（僅戰車兵）+ 自訂修正；低於 0 視為 0。</li>
         <li>每升一級：成長率 100% 以下時以該機率 +1；超過 100% 時先確定 +1，超出部分再以機率 +1。</li>
         <li>顯示值 = 內部值 + 目前職業補正 + 坐騎能力加成；轉職不重置等級、沒有轉職加成。</li>
         <li>期望值的四捨五入方式與 game8 相同（已用索緋雅 Lv8 詛咒師 → Lv99 賢士的路線逐項核對：Lv20 合計 134、Lv35 194、Lv45 241、Lv99 463）。</li>
@@ -862,22 +918,26 @@
         <li>只有凱伊篇（第 1 部第 5 章起）與救世篇能捕獲；其他路線只能用伊歐帶來的羅西南、亞歷山卓帶來的布克發拉斯。</li>
         <li>坐騎的能力與成長加成會隨友好度（Lv1–5）提高。這裡使用友好 <b>Lv5（滿級）</b>的數值；Lv1–4 各級怎麼分配目前沒有公開資料，若你的坐騎還沒滿級，可以用「✎ 修正」手動調整。</li>
         <li><b>成長加成不一定是能力加成 ×5</b>：鴕鳥（飲魯尼魯斯）、飛馬、巴烏系是 ×5；<b>馬系的成長分配不同，而且包含 HP</b>。例如汗血馬的能力加成是力2 技1 防2，成長加成卻是 HP+5 力+5 技+5 防+10。game8 有凱伊（榮光騎士）配野生馬的截圖可以佐證：成長率 HP/速/技/防/魔防 各 +5，能力 速+1 技+3 防+1。</li>
-        <li>戰車兵用兩匹馬拉車，坐騎的<b>成長加成 ×2</b>（已用馬吉迪配汗血馬的實例驗算）。能力加成是否也 ×2 不確定，這裡以 ×1 計算。</li>
+        <li>戰車兵用兩匹馬拉車，坐騎的<b>成長加成 ×2</b>。能力加成是否也 ×2 不確定，這裡以 ×1 計算。</li>
+        <li><b>戰車兵之道</b>：戰車本身也有成長加成，會隨升級提高。初始戰車 HP+10 力+5 魔+5 速+5 技+5 防+10 魅+5（社群表寫合計 50、但各項加起來 45，未確認）；多輪升級後 HP+10 力+15 魔+5 速+5 技+10 防+20 魔防+5 運+5 魅+10（合計 85）。後者與馬吉迪的實測逐項吻合：個人＋戰車兵職業＋升級後戰車＋汗血馬×2＝HP95 力80 技65 防90。戰車何時升級未公開，請在每段路線選擇「初始戰車」或「多輪升級後」。</li>
+        <li>友好度滿級的坐騎可以放生，換成能力值相同的飾品（例如野生馬 → 駿馬掛飾）；裝備飾品會讓顯示值變高，起點請照畫面上的值填。</li>
         <li>職業與坐騎類型：馬＝輕騎兵、戰車兵、森林騎士、榮光騎士、遊唱詩人、重裝騎兵、奧利哈鐵騎、弓騎士、英勇騎士、瓦爾基里姆、高階墓誌銘、烈駿神將；飛鴕＝飛鴕兵、騎甲鴕兵、神鴕兵；天馬＝天翼兵、聖天翼兵（女性限定）；飛龍＝馭龍兵、飛龍將領；戰象兵沒有可捕獲的象。</li>
         <li>歐露赫露、哥萊亞斯的個人技能讓他們無法轉職為騎兵或飛行兵種。</li>
         <li>社群表中「聖飛馬 3速2魔防」應是野生飛馬的數值；聖飛馬（ファルコン）為 力1 速3 技1。</li>
       </ul>
       <h2>資料修正與不確定的地方</h2>
       <ul>${corr}
-        <li>戰車兵之道、戰象兵之道（等級越高成長率越高）沒有公開公式，未計入。</li>
-        <li>羅西南、紅聖飛馬的數值未確認；多個職業在不同網站間有速度/技巧互換的差異，這裡採用 game8.jp 的數值，你可以在「資料／校正」改成遊戲內看到的值。</li>
+        <li>戰車何時從「初始」升到「多輪升級後」、戰象兵之道的數值都未公開。</li>
+        <li>紅聖飛馬的數值未確認。神鴕兵、馭龍兵、遊唱詩人、戰象兵、戰鬥將領、探影者、奧利哈鐵騎、德魯伊、賢士等職業在 game8 與 GameWith／簡中 wiki／騰訊文件表之間速度與技巧對調，兩邊都有多個來源，這裡維持 game8.jp 的數值；你可以在「資料／校正」改成遊戲內看到的值。</li>
+        <li>紅花、特洛伊亞、安娜的預設加入資料取自騰訊文件社群表（原表不含職業補正，已自動加上）。</li>
         <li>最上級、神將職與少數角色的繁中名稱是由簡中轉換的暫譯。</li>
         <li>能力值上限、等級以外的轉職條件（證照、熟練度、名聲）沒有計入。</li>
       </ul>
       <h2>資料來源</h2>
       <ul>
         <li>角色／職業成長率、補正、加入資料：<a href="https://game8.jp/fe-banshisenko/816448" target="_blank" rel="noopener">game8.jp 育成方針計算ツール</a> 的資料檔</li>
-        <li>坐騎：game8.jp 各動物頁、<a href="https://game8.co/games/Fire-Emblem-Fortunes-Weave" target="_blank" rel="noopener">game8.co</a>、簡中 wiki（fire-emblem-fw.site）</li>
+        <li>坐騎、戰車：game8.jp 各動物頁、<a href="https://game8.co/games/Fire-Emblem-Fortunes-Weave" target="_blank" rel="noopener">game8.co</a>、簡中 wiki（fire-emblem-fw.site）、<a href="https://docs.qq.com/sheet/DV0N0VUZLSXRmUWFq" target="_blank" rel="noopener">騰訊文件《火焰之纹章 万紫千红》在线数据表</a></li>
+        <li>資料修正的比對來源：game8.co、Serenes Forest、繁中社群 Google 試算表、簡中 wiki、騰訊文件表</li>
         <li>中文名稱：繁中社群整理的 Google 試算表、巴哈姆特／GNN 文章、簡中 wiki</li>
       </ul>
       <h2>本機資料</h2>
@@ -1138,6 +1198,7 @@
           classId: last ? last.classId : p.start.classId,
           mountId: last ? last.mountId : p.start.mountId,
           custom: null,
+          chariot: last ? last.chariot : p.start.chariot,
         });
         return renderPlan(), refreshPlanOutputs();
       }
@@ -1161,6 +1222,7 @@
         [A.classId, B.classId] = [B.classId, A.classId];
         [A.mountId, B.mountId] = [B.mountId, A.mountId];
         [A.custom, B.custom] = [B.custom, A.custom];
+        [A.chariot, B.chariot] = [B.chariot, A.chariot];
         return renderPlan(), refreshPlanOutputs();
       }
       case 'custom': {
@@ -1190,7 +1252,13 @@
       case 'apply-route': {
         const rt = lastRecRoutes[i];
         if (!rt) return;
-        p.segments = rt.segments.map((s) => ({ toLv: s.toLv, classId: s.cls.id, mountId: s.mount ? s.mount.id : '', custom: null }));
+        p.segments = rt.segments.map((s) => ({
+          toLv: s.toLv,
+          classId: s.cls.id,
+          mountId: s.mount ? s.mount.id : '',
+          custom: null,
+          chariot: s.cls.chariot ? state.rec.chariot : undefined,
+        }));
         p.judge = { row: 0, stats: null };
         state.tab = 'plan';
         renderTabs();

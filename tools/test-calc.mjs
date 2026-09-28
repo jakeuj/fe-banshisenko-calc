@@ -68,17 +68,43 @@ test('ソフィア推薦路線 = game8 計算器輸出', () => {
   }
 });
 
-test('馬吉迪 + 戰車兵(後期成長) + 汗血馬：坐騎成長 ×2', () => {
+test('馬吉迪 + 戰車兵 + 多輪升級後戰車 + 汗血馬 = 玩家實測 HP95 力80 技65 防90', () => {
   const u = unit('マジーデ');
   const c = cls('戦車兵');
-  const late = [20, 20, 0, 0, 25, 30, 5, 10, 20];
-  const custom = late.map((v, k) => v - c.growth[k]);
-  const g = C.effectiveGrowth(u, c, mount('kanketsu'), custom);
+  assert.equal(c.chariot, true);
+  const upgraded = D.chariotStages.find((x) => x.id === 'upgraded').growth;
+  // 戰車兵職業 + 升級後戰車 = 實測的後期戰車兵職業成長
+  assert.deepEqual(c.growth.map((v, k) => v + upgraded[k]), [20, 20, 0, 0, 25, 30, 5, 10, 20]);
+  const g = C.effectiveGrowth(u, c, mount('kanketsu'), null, upgraded);
   assert.equal(g[0], 95); // HP
   assert.equal(g[1], 80); // 力
   assert.equal(g[4], 65); // 技
   assert.equal(g[5], 90); // 守
   assert.equal(C.mountGrowthMult(c, mount('kanketsu')), 2);
+  // project 會把 bonus 算進成長
+  const r = C.project(u, { lv: 20, cls: c, displayed: new Array(9).fill(10) }, [{ toLv: 21, cls: c, mount: mount('kanketsu'), bonus: upgraded }]);
+  assert.equal(r.rows[0].growth[0], 95);
+});
+
+test('資料修正：多來源一致、只有 game8.jp 不同的值', () => {
+  assert.equal(cls('軽騎兵').growth[4], 0);
+  assert.deepEqual([cls('騎甲駝兵').growth[3], cls('騎甲駝兵').growth[4]], [10, 5]);
+  assert.equal(cls('フォレストナイト').growth[4], 10);
+  assert.deepEqual([cls('マスターアーチ').growth[3], cls('マスターアーチ').growth[4]], [15, 20]);
+  assert.deepEqual([cls('聖天翼兵').growth[3], cls('聖天翼兵').growth[4]], [10, 5]);
+  assert.deepEqual([cls('ドラゴンマスター').growth[3], cls('ドラゴンマスター').growth[4]], [5, 0]);
+  assert.equal(unit('ナジャ').growth[1], 45);
+  assert.ok(D.meta.corrections.every((c) => c.from !== c.to), 'game8 已自行修正的項目應從 CORRECTIONS 移除');
+});
+
+test('補充加入資料（騰訊文件表，不含補正 → 自動加上職業補正）', () => {
+  const a = unit('アンナ');
+  assert.equal(a.join.classId, '戦象兵');
+  assert.equal(a.join.lv, 30);
+  // 表上 39 14 11 21 20 19 9 20 13 + 戰象兵補正 HP+10 力+2 速-5 技+3 守+7 魅+3
+  assert.deepEqual(a.join.stats, [49, 16, 11, 16, 23, 26, 9, 20, 16]);
+  assert.ok(unit('コウカ').join && unit('トロイア').join);
+  assert.equal(unit('ソフィア').join.source, 'game8');
 });
 
 test('凱伊 + 榮光騎士(已修正) + 野生馬 = game8 截圖', () => {

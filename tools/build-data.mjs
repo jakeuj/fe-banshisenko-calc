@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { UNIT_ZH, FACTION_ZH, CLASS_ZH, TIER_ZH, SKILL_ZH } from './names-zh.mjs';
-import { MOUNT_TYPES, CLASS_MOUNT_TYPE, MOUNT_GROWTH_MULT, MOUNTS, ROUTES } from './mounts.mjs';
+import { MOUNT_TYPES, CLASS_MOUNT_TYPE, MOUNT_GROWTH_MULT, MOUNTS, ROUTES, CHARIOT_CLASSES, CHARIOT_STAGES } from './mounts.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const RAW = join(here, 'raw', 'game8.json');
@@ -27,13 +27,37 @@ const STATS = [
 ];
 const KEYS = STATS.map((s) => s.key);
 
-// 資料修正（game8.jp 與其他來源/遊戲截圖不符者）
+// 資料修正（game8.jp 與其他來源/遊戲截圖不符者）。cls = 職業，unit = 角色。
+// 規則：有遊戲截圖/實測，或 game8.jp 是唯一不同的來源（連 game8.co 都不同）時才修正。
+const G8CO_CN = 'game8.co、簡中 wiki、騰訊文件社群表三者一致，只有 game8.jp 不同（速度/技巧疑似填錯欄）。';
 const CORRECTIONS = [
   { cls: 'バーディンガー', field: 'growth', stat: 'dex', to: 0,
     why: 'game8.jp 凱伊（バーディンガー）遊戲截圖技巧成長 45 = 個人 45 + 職業 0；game8.co 亦為 0。' },
   { cls: '戦車兵', field: 'growth', stat: 'dex', to: 15,
-    why: 'game8.co、繁中社群表、簡中 wiki 皆為 +15；game8.jp 的 +25 疑似含「戰車兵之道」等級加成。' },
+    why: 'game8.co、繁中社群表、簡中 wiki、騰訊文件表皆為 +15；game8.jp 的 +25 疑似含「戰車兵之道」的戰車加成。' },
+  { cls: '軽騎兵', field: 'growth', stat: 'dex', to: 0,
+    why: 'game8.co、繁中社群表、簡中 wiki、騰訊文件社群表皆為 0，只有 game8.jp 為 +5。' },
+  { cls: '騎甲駝兵', field: 'growth', stat: 'spd', to: 10, why: G8CO_CN + '（game8.jp 為 +15）' },
+  { cls: '騎甲駝兵', field: 'growth', stat: 'dex', to: 5, why: G8CO_CN + '（game8.jp 為 +10）' },
+  { cls: 'フォレストナイト', field: 'growth', stat: 'dex', to: 10, why: G8CO_CN + '（game8.jp 為 +15）' },
+  { cls: 'マスターアーチ', field: 'growth', stat: 'spd', to: 15, why: G8CO_CN + '（game8.jp 速 +20、技 +15，互換）' },
+  { cls: 'マスターアーチ', field: 'growth', stat: 'dex', to: 20, why: G8CO_CN + '（game8.jp 速 +20、技 +15，互換）' },
+  { cls: '聖天翼兵', field: 'growth', stat: 'spd', to: 10, why: G8CO_CN + '（game8.jp 速 +5、技 +10，互換）' },
+  { cls: '聖天翼兵', field: 'growth', stat: 'dex', to: 5, why: G8CO_CN + '（game8.jp 速 +5、技 +10，互換）' },
+  { cls: 'ドラゴンマスター', field: 'growth', stat: 'spd', to: 5, why: G8CO_CN + '（game8.jp 速 0、技 +5，互換）' },
+  { cls: 'ドラゴンマスター', field: 'growth', stat: 'dex', to: 0, why: G8CO_CN + '（game8.jp 速 0、技 +5，互換）' },
+  { unit: 'ナジャ', field: 'growth', stat: 'str', to: 45,
+    why: '遊戲內實測：哪吒當劍客（職業力量成長 +0）時力量成長顯示 45，個人值即為 45；Serenes Forest、繁中社群表、簡中 wiki、騰訊文件社群表亦為 45，只有 game8（.jp/.co）為 55。' },
 ];
+
+// game8 沒有加入資料的角色：取自騰訊文件社群表「01-全可加入角色信息」。
+// 該表的能力值不含職業補正（與 game8 的 伊歐、班迪茲、伊修瑪爾 比對，差值剛好等於職業補正），這裡會自動加上補正。
+const EXTRA_JOIN = {
+  'コウカ': { classId: 'ウァテス', lv: 40, base: [45, 15, 34, 26, 30, 21, 30, 18, 22] },
+  'トロイア': { classId: 'バトルモンク', lv: 45, base: [52, 31, 32, 33, 28, 23, 28, 24, 21] },
+  'アンナ': { classId: '戦象兵', lv: 30, base: [39, 14, 11, 21, 20, 19, 9, 20, 13] },
+};
+const EXTRA_JOIN_SOURCE = '騰訊文件社群表';
 
 const num = (v) => {
   if (v === null || v === undefined || v === '') return null;
@@ -102,6 +126,7 @@ const classes = table(23029).map((r) => {
     license: r.col_41 || '',
     mountType,
     mountMult: mountType && mountType !== 'elephant' ? MOUNT_GROWTH_MULT[jp] || 1 : 0,
+    chariot: CHARIOT_CLASSES.includes(jp),
     special: !!special,
     unlock,
     url: r.url || '',
@@ -112,13 +137,16 @@ for (const jp of Object.keys(CLASS_MOUNT_TYPE)) if (!classById[jp]) warnings.pus
 for (const c of classes) if (c.mounted && !c.mountType) warnings.push('騎乘職業未指定坐騎類型：' + c.jp);
 
 const applied = [];
-for (const fix of CORRECTIONS) {
-  const c = classById[fix.cls];
+function applyCorrection(fix, target, kind) {
   const i = KEYS.indexOf(fix.stat);
-  const from = c[fix.field][i];
-  c[fix.field][i] = fix.to;
-  c.corrected = true;
-  applied.push({ ...fix, from, clsZh: c.zh });
+  const from = target[fix.field][i];
+  target[fix.field][i] = fix.to;
+  target.corrected = true;
+  applied.push({ kind, id: target.id, zh: target.zh, field: fix.field, stat: fix.stat, from, to: fix.to, why: fix.why });
+}
+for (const fix of CORRECTIONS.filter((f) => f.cls)) {
+  if (!classById[fix.cls]) warnings.push('修正對象職業不存在：' + fix.cls);
+  else applyCorrection(fix, classById[fix.cls], 'class');
 }
 
 // ── 角色 ──
@@ -133,7 +161,14 @@ for (const r of table(23026)) {
   let join = null;
   if (init && init.col_1 && init.col_2) {
     if (!classById[init.col_1]) warnings.push('加入職業不存在：' + jp + ' ' + init.col_1);
-    join = { classId: init.col_1, lv: num(init.col_2), stats: cols(init, 3) };
+    join = { classId: init.col_1, lv: num(init.col_2), stats: cols(init, 3), source: 'game8' };
+  }
+  const extra = EXTRA_JOIN[jp];
+  if (extra && join) warnings.push('game8 已有加入資料，可從 EXTRA_JOIN 移除：' + jp);
+  if (extra && !join) {
+    const c = classById[extra.classId];
+    if (!c) warnings.push('EXTRA_JOIN 職業不存在：' + jp + ' ' + extra.classId);
+    else join = { classId: extra.classId, lv: extra.lv, stats: extra.base.map((v, k) => v + c.mod[k]), source: EXTRA_JOIN_SOURCE };
   }
   const rec = [45, 46, 47, 48, 49].map((i) => r['col_' + i] || null);
   for (const c of rec) if (c && !classById[c]) warnings.push('推薦職業不存在：' + jp + ' ' + c);
@@ -160,6 +195,11 @@ for (const r of table(23026)) {
   });
 }
 units.sort((a, b) => a.order - b.order);
+for (const fix of CORRECTIONS.filter((f) => f.unit)) {
+  const u = units.find((x) => x.id === fix.unit);
+  if (!u) warnings.push('修正對象角色不存在：' + fix.unit);
+  else applyCorrection(fix, u, 'unit');
+}
 
 // ── 坐騎 ──
 const toArr = (o) => KEYS.map((k) => o[k] || 0);
@@ -179,11 +219,12 @@ const data = {
   classes,
   mounts,
   mountTypes: MOUNT_TYPES,
+  chariotStages: CHARIOT_STAGES.map((s) => ({ ...s, verified: s.verified !== false, note: s.note || '', growth: toArr(s.growth) })),
   routes: ROUTES,
   meta: {
     source: SRC_URL,
     builtAt: new Date().toISOString(),
-    corrections: applied.map(({ cls, clsZh, field, stat, from, to, why }) => ({ cls, clsZh, field, stat, from, to, why })),
+    corrections: applied,
   },
 };
 
@@ -191,7 +232,9 @@ const banner = '// 由 tools/build-data.mjs 產生，請勿手動修改。\n';
 await writeFile(OUT, banner + 'window.FE_DATA = ' + JSON.stringify(data) + ';\n');
 
 console.log(`角色 ${units.length}（有加入資料 ${units.filter((u) => u.join).length}）、職業 ${classes.length}、坐騎 ${mounts.length}`);
-console.log('套用修正：', applied.map((a) => `${a.cls} ${a.stat} ${a.from}→${a.to}`).join('；'));
+console.log('套用修正：', applied.map((a) => `${a.id} ${a.stat} ${a.from}→${a.to}`).join('；'));
+const extraJoined = units.filter((u) => u.join && u.join.source !== 'game8').map((u) => u.zh);
+if (extraJoined.length) console.log('補充加入資料：', extraJoined.join('、'));
 const tentative = [...units.filter((u) => u.zhTentative).map((u) => u.zh), ...classes.filter((c) => c.zhTentative).map((c) => c.zh)];
 console.log('暫譯名稱：', tentative.join('、'));
 if (warnings.length) {

@@ -1,7 +1,9 @@
 // 騎乘動物（坐騎）資料 —— game8 計算器沒有這部分，手動整理。
 // 數值 = 友好 Lv5（滿級）時的加成。stat = 能力加成（顯示值直接 +），growth = 成長率加成（%）。
 // 來源：game8.jp 各動物頁 (817423–817436, 817506–817508)、fire-emblem-fw.site misc.json（簡中 wiki）、
-//       game8.jp 凱伊 × 野生馬 截圖（成長 HP/速/技/守/魔防 各 +5、能力 速+1 技+3 守+1）。
+//       game8.jp 凱伊 × 野生馬 截圖（成長 HP/速/技/守/魔防 各 +5、能力 速+1 技+3 守+1）、
+//       騰訊文件《火焰之纹章 万紫千红》在线数据表「12-【凯篇】骑乘、指导信息表」（簡中社群整理）。
+// release = 友好滿級後放生可得的飾品（能力值同坐騎能力加成，除非另註），取自騰訊文件表。
 // 規則：鴕鳥/天馬/巴烏系 成長 = 能力 ×5；馬系成長分配不同（含 HP）。
 // verified:false = 數值未確認（推算），UI 會標示。
 // avail：capture = 凱伊篇（第1部5章起）與救世篇可捕獲；capture3 = 僅救世篇（稀有）；
@@ -29,6 +31,21 @@ export const CLASS_MOUNT_TYPE = {
 // 成長加成倍率（戰車兵用兩匹馬拉車 → 坐騎成長加成 ×2）
 export const MOUNT_GROWTH_MULT = { '戦車兵': 2 };
 
+// 戰車兵之道：戰車本身的成長加成（加在職業成長率上，與坐騎 ×2 分開計算）。
+// 來源：騰訊文件社群表「12-【凯篇】骑乘、指导信息表」的「战车（初始）」「战车（多轮升级）」兩列。
+// 「多輪升級後」與馬吉迪實測完全吻合：個人 + 戰車兵職業 + 戰車(升級後) + 汗血馬×2 = HP95 力80 技65 防90。
+// 升級的時機（幾級、幾輪）未公開，由使用者在每段路線自行選擇。
+export const CHARIOT_CLASSES = ['戦車兵'];
+export const CHARIOT_STAGES = [
+  { id: 'initial', zh: '初始戰車', verified: false,
+    growth: { hp: 10, str: 5, mag: 5, spd: 5, dex: 5, def: 10, cha: 5 },
+    note: '社群表列出的各項相加為 45，但表上寫合計 50，可能漏了一項 +5，未確認。' },
+  { id: 'upgraded', zh: '多輪升級後', verified: true,
+    growth: { hp: 10, str: 15, mag: 5, spd: 5, dex: 10, def: 20, res: 5, lck: 5, cha: 10 },
+    note: '合計 85；與馬吉迪實測（後期戰車兵成長 HP20 力20 魔0 速0 技25 防30 魔防5 運10 魅20）逐項吻合。' },
+  { id: 'none', zh: '不計戰車', growth: {} },
+];
+
 const S = (o) => o;
 
 export const MOUNTS = [
@@ -36,67 +53,80 @@ export const MOUNTS = [
   { id: 'wild_horse', jp: '野生の馬', zh: '野生馬', type: 'horse', avail: 'capture',
     stat: S({ spd: 1, dex: 3, def: 1 }), growth: S({ hp: 5, spd: 5, dex: 5, def: 5, res: 5 }),
     food: '甜味蔬菜', where: '向陽嶺、奧雷安斯平原、落日之路、戴莫斯台地',
-    skills: ['聯合疾行：【騎兵】移動力+1(2)', '聯合喚起：【騎兵】必殺迴避+5(10)'] },
+    skills: ['聯合疾行：【騎兵】移動力+1(2)', '聯合喚起：【騎兵】必殺迴避+5(10)'],
+    release: '駿馬掛飾' },
   { id: 'kanketsu', jp: '汗血馬', zh: '汗血馬', type: 'horse', avail: 'capture',
     stat: S({ str: 2, dex: 1, def: 2 }), growth: S({ hp: 5, str: 5, dex: 5, def: 10 }),
     food: '辣味蔬菜', where: '落日之路（稀有）',
-    skills: ['聯合猛戰技：【騎兵】使用戰技攻擊時，攻擊力+2(4)', '聯合戰技集中：【騎兵】使用戰技攻擊時，命中+10(15)'] },
+    skills: ['聯合猛戰技：【騎兵】使用戰技攻擊時，攻擊力+2(4)', '聯合戰技集中：【騎兵】使用戰技攻擊時，命中+10(15)'],
+    release: '紅馬掛飾' },
   { id: 'monoceros', jp: 'モノケロース', zh: '莫諾凱洛斯', type: 'horse', avail: 'capture',
     stat: S({ spd: 1, dex: 1, lck: 3 }), growth: S({ hp: 5, spd: 5, dex: 5, res: 10 }),
     food: '珍饈蔬菜', where: '奧雷安斯平原（稀有）',
-    skills: ['聯合奇蹟：【騎兵】幸運+3(5)', '聯合治癒：【騎兵】戰鬥後，小(中)幅回復自己的HP'] },
+    skills: ['聯合奇蹟：【騎兵】幸運+3(5)', '聯合治癒：【騎兵】戰鬥後，小(中)幅回復自己的HP'],
+    release: '角馬掛飾' },
   { id: 'black_horse', jp: '黒馬', zh: '黑馬', type: 'horse', avail: 'capture3',
     stat: S({ str: 1, spd: 3, dex: 1 }), growth: S({ hp: 5, str: 5, spd: 10, dex: 5 }),
     food: '苦味蔬菜', where: '戴莫斯台地（救世篇・稀有）', zhTentative: true,
     skills: ['再移動：【騎兵】戰鬥後，最多可再移動1(2)格'] },
-  { id: 'rocinante', jp: 'ロシナン', zh: '羅西南', type: 'horse', avail: 'io', zhTentative: true, verified: false,
+  { id: 'rocinante', jp: 'ロシナン', zh: '羅西南', type: 'horse', avail: 'io', zhTentative: true,
     stat: S({ spd: 1, dex: 3, def: 2 }), growth: S({ hp: 5, spd: 5, dex: 5, def: 10, res: 5 }),
     food: '甜味蔬菜', where: '招募伊歐時附帶',
-    note: '能力加成取自簡中 wiki；成長加成僅有友好 Lv4 實測 (HP5 速5 技5 守5 魔防5)，Lv5 的守備 +10 為推算。',
+    note: '成長加成（合計 30）由騰訊文件社群表確認，與簡中 wiki 的友好 Lv4 實測（HP5 速5 技5 守5 魔防5）一致。',
     skills: ['聯合疾行：【騎兵】移動力+1(2)'] },
   // ── 飛鴕（オルニウス系）──
   { id: 'wild_ornius', jp: '野生のオルニウス', zh: '野生飲魯尼魯斯', alias: ['野生歐魯尼烏斯'], type: 'ornius', avail: 'capture',
     stat: S({ spd: 2, dex: 3 }), growth: S({ spd: 10, dex: 15 }),
     food: '甜味魚', where: '埃利薩嶺、雀躍之徑、烏拉諾司山、法羅之森',
-    skills: ['聯合隱密：【騎兵】戰鬥時，若自己處於有利地形，迴避+10(防禦+3)', '聯合疾行：【騎兵】移動力+1(2)'] },
+    skills: ['聯合隱密：【騎兵】戰鬥時，若自己處於有利地形，迴避+10(防禦+3)', '聯合疾行：【騎兵】移動力+1(2)'],
+    release: '鳥羽掛飾' },
   { id: 'white_ornius', jp: '白羽のオルニウス', zh: '白羽飲魯尼魯斯', alias: ['白羽歐魯尼烏斯'], type: 'ornius', avail: 'capture',
     stat: S({ spd: 1, dex: 1, res: 3 }), growth: S({ spd: 5, dex: 5, res: 15 }),
     food: '甜味魚', where: '法羅之森（稀有）',
-    skills: ['聯合治癒：【騎兵】戰鬥後，小(中)幅回復自己的HP', '聯合淨化：【騎兵】自己的行動階段開始時，50%(100%)解除自己的中毒狀態'] },
+    skills: ['聯合治癒：【騎兵】戰鬥後，小(中)幅回復自己的HP', '聯合淨化：【騎兵】自己的行動階段開始時，50%(100%)解除自己的中毒狀態'],
+    release: '白羽掛飾' },
   { id: 'meganius', jp: 'メガニウス', zh: '美加尼烏斯', type: 'ornius', avail: 'capture',
     stat: S({ str: 1, dex: 1, def: 3 }), growth: S({ str: 5, dex: 5, def: 15 }),
     food: '辣味魚', where: '亞庫席翁溪谷、烏拉諾司山、雀躍之徑',
-    skills: ['聯合巨軀：【騎兵】體格+2(4)', '聯合疾行：【騎兵】移動力+1(2)'] },
+    skills: ['聯合巨軀：【騎兵】體格+2(4)', '聯合疾行：【騎兵】移動力+1(2)'],
+    release: '強羽掛飾（技1 速1 防3）' },
   { id: 'red_meganius', jp: '赤羽のメガニウス', zh: '紅羽美加尼烏斯', type: 'ornius', avail: 'capture',
     stat: S({ str: 3, dex: 1, def: 1 }), growth: S({ str: 15, dex: 5, def: 5 }),
     food: '辣味魚', where: '亞庫席翁溪谷（稀有）',
-    skills: ['聯合防護：【騎兵】受到必殺的一擊時，受到的傷害減少至70(50)%'] },
+    skills: ['聯合疾行：【騎兵】移動力+1(2)', '聯合防護：【騎兵】受到必殺的一擊時，受到的傷害減少至70(50)%'],
+    release: '紅羽掛飾' },
   { id: 'maginius', jp: 'マジニウス', zh: '瑪吉尼烏斯', type: 'ornius', avail: 'capture', zhTentative: true,
     stat: S({ mag: 3, dex: 2 }), growth: S({ mag: 15, dex: 10 }),
     food: '苦味魚', where: '獵首岩、沙漠入口、塔爾伯斯平原',
-    skills: ['聯合魔法集中：【騎兵】裝備魔法時，命中+10(15)', '聯合疾行：【騎兵】移動力+1(2)'] },
+    skills: ['聯合魔法集中：【騎兵】裝備魔法時，命中+10(15)', '聯合疾行：【騎兵】移動力+1(2)'],
+    release: '魔羽掛飾（魔3 速2）' },
   { id: 'black_maginius', jp: '黒羽のマジニウス', zh: '黑羽瑪吉尼烏斯', alias: ['黑羽美加尼烏斯'], type: 'ornius', avail: 'capture',
     stat: S({ mag: 2, spd: 2, dex: 1 }), growth: S({ mag: 10, spd: 10, dex: 5 }),
     food: '苦味魚', where: '獵首岩（稀有）',
-    skills: ['聯合魔法尖銳：【騎兵】裝備魔法時，必殺+5(10)', '再移動：【騎兵】戰鬥後，最多可再移動1(2)格'] },
+    skills: ['聯合魔法尖銳：【騎兵】裝備魔法時，必殺+5(10)', '再移動：【騎兵】戰鬥後，最多可再移動1(2)格'],
+    release: '黑羽掛飾' },
   // ── 天馬（ペガサス系）──
   { id: 'wild_pegasus', jp: '野生のペガサス', zh: '野生飛馬', alias: ['野生天馬'], type: 'pegasus', avail: 'capture',
     stat: S({ spd: 3, res: 2 }), growth: S({ spd: 15, res: 10 }),
-    food: '甜味蔬菜', where: '天馬岩、巨鳥之頸、黑翼之谷',
-    skills: ['聯合對魔：【飛行】戰鬥時，若敵人裝備魔法，攻擊力+3(5)', '聯合飛翔：【飛行】移動力+1(2)'] },
+    food: '甜味蔬菜', where: '天馬岩、巨鳥之頸、黑翼之谷（支線解鎖）',
+    skills: ['聯合對魔：【飛行】戰鬥時，若敵人裝備魔法，攻擊力+3(5)', '聯合飛翔：【飛行】移動力+1(2)'],
+    release: '翼馬掛飾' },
   { id: 'dark_pegasus', jp: 'ダークペガサス', zh: '暗飛馬', alias: ['暗天馬'], type: 'pegasus', avail: 'capture',
     stat: S({ mag: 3, spd: 2 }), growth: S({ mag: 15, spd: 10 }),
-    food: '苦味蔬菜', where: '黑翼之谷（稀有）',
-    skills: ['聯合飛翔：【飛行】移動力+1(2)'] },
+    food: '苦味蔬菜', where: '黑翼之谷（支線解鎖・稀有）',
+    skills: ['聯合飛翔：【飛行】移動力+1(2)', '聯合魔法高速：【飛行】戰鬥時，以魔力%的機率迴避+10(20)'],
+    release: '黑翼掛飾' },
   { id: 'falcon', jp: 'ファルコン', zh: '聖飛馬', alias: ['聖天馬'], type: 'pegasus', avail: 'capture',
     stat: S({ str: 1, spd: 3, dex: 1 }), growth: S({ str: 5, spd: 15, dex: 5 }),
     food: '珍饈蔬菜', where: '狂風海岸；巨鳥之頸、天馬岩（稀有）',
     note: '部分社群表寫成「3速2魔防」，那是野生飛馬的數值；game8.jp 與簡中 wiki 皆為 力1 速3 技1。',
-    skills: ['飛行再移動：【飛行】戰鬥後，最多可再移動1(2)格'] },
+    skills: ['聯合飛翔：【飛行】移動力+1(2)', '飛行再移動：【飛行】戰鬥後，最多可再移動1(2)格', '聯合旋風：敵人裝備弓時，迴避+10'],
+    release: '聖翼掛飾' },
   { id: 'bucephalus', jp: 'ブーケパラス', zh: '布克發拉斯', type: 'pegasus', avail: 'alexandra',
     stat: S({ str: 1, spd: 3, res: 2 }), growth: S({ str: 5, spd: 15, res: 10 }),
     food: '甜味蔬菜', where: '招募亞歷山卓時附帶',
-    skills: ['聯合飛翔：【飛行】移動力+1(2)'] },
+    skills: ['聯合飛翔：【飛行】移動力+1(2)'],
+    release: '翼馬掛飾（速3 魔防2）' },
   { id: 'red_falcon', jp: 'レッドファルコン', zh: '紅聖飛馬', type: 'pegasus', avail: 'capture3', zhTentative: true, verified: false,
     stat: S({ str: 2, spd: 2, dex: 1 }), growth: S({ str: 10, spd: 10, dex: 5 }),
     food: '辣味蔬菜', where: '狂風海岸（救世篇・稀有）',
@@ -106,7 +136,8 @@ export const MOUNTS = [
   { id: 'wild_bau', jp: '野生のバウ', zh: '野生巴烏', type: 'bau', avail: 'capture', zhTentative: true,
     stat: S({ str: 2, spd: 1, dex: 2 }), growth: S({ str: 10, spd: 5, dex: 10 }),
     food: '甜味肉', where: '龍哮海岬、亞席羅堡壘、戰士之路、西德姆之谷',
-    skills: ['聯合猛戰技：【飛行】使用戰技攻擊時，攻擊力+2(4)', '聯合飛翔：【飛行】移動力+1(2)'] },
+    skills: ['聯合猛戰技：【飛行】使用戰技攻擊時，攻擊力+2(4)', '聯合飛翔：【飛行】移動力+1(2)'],
+    release: '龍鱗護身符' },
   { id: 'red_bau', jp: 'レッドバウ', zh: '紅巴烏', type: 'bau', avail: 'capture3', zhTentative: true,
     stat: S({ str: 3, dex: 2 }), growth: S({ str: 15, dex: 10 }),
     food: '辣味肉', where: '亞席羅堡壘（救世篇・稀有）',
