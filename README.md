@@ -25,6 +25,14 @@ node tools/serve.mjs                  # 本機預覽 http://localhost:8765/
 - `tools/mounts.mjs`：坐騎資料（game8 計算器沒有，手動整理）
 - `tools/names-zh.mjs`：日文 → 繁中名稱對照
 
+### AI 代理技能
+
+`.agents/skills/` 收錄本專案的技能（資料更新、計算引擎、發布、機制研究）。Claude Code 只讀 `.claude/skills/`，clone 後執行一次即可讓它自動載入：
+
+```bash
+node tools/link-skills.mjs   # 建立 .claude/skills → .agents/skills 連結（Windows 用 junction）
+```
+
 ## 資料來源
 
 - 角色／職業成長率、補正值、加入資料：game8.jp「育成方針計算ツール」
