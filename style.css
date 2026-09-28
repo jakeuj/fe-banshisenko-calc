@@ -246,6 +246,7 @@ details.box > summary { cursor: pointer; font-size: 13px; font-weight: 600; }
 .prose code { background: var(--soft); padding: 0 4px; border-radius: 4px; }
 
 .foot { color: var(--muted); font-size: 12px; padding-bottom: 32px; }
+.foot p { margin: 4px 0 0; }
 
 /* 角色檔案與培養摘要 */
 #unit-panel { position: relative; overflow: hidden; }

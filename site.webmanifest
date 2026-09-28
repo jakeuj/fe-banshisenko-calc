@@ -1,0 +1,16 @@
+{
+  "name": "萬紫千紅 培養計算器",
+  "short_name": "萬紫千紅計算器",
+  "description": "聖火降魔錄 萬縷千絲（萬紫千紅）角色成長預測：期望值、機率區間、成長判定、坐騎加成與自動推薦。",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#efe8d9",
+  "theme_color": "#182332",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

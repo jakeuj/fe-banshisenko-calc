@@ -1,4 +1,4 @@
-// 本機預覽用的簡易靜態伺服器：node tools/serve.mjs [port]
+// 本機預覽用的簡易靜態伺服器：node tools/serve.mjs [port]（未指定時用環境變數 PORT，再沒有就用 8765）
 // （直接雙擊 index.html 也能用；這個只是方便在瀏覽器以 http:// 開啟）
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -6,7 +6,7 @@ import { extname, join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const port = Number(process.argv[2]) || 8765;
+const port = Number(process.argv[2] || process.env.PORT) || 8765;
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -15,6 +15,10 @@ const TYPES = {
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
+  '.xml': 'application/xml; charset=utf-8',
 };
 
 createServer(async (req, res) => {

@@ -3,9 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>萬紫千紅 培養計算器</title>
-  <meta name="description" content="聖火降魔錄 萬紫千紅：以目前等級/職業/實際數值為起點，預測轉職路線的期望值與機率區間，含凱伊篇坐騎成長加成與自動推薦。">
-  <link rel="stylesheet" href="style.css?v=7241b222">
+  <title>萬紫千紅 培養計算器｜聖火降魔錄 萬縷千絲 成長率・轉職・坐騎預測</title>
+  <meta name="description" content="《聖火降魔錄 萬縷千絲》（萬紫千紅／Fire Emblem: Fortune's Weave）角色培養計算器：從目前等級、職業與實際能力值出發，預測轉職路線的期望值與機率區間，含成長判定、凱伊篇坐騎成長加成、戰車兵之道與自動推薦。">
+  <link rel="canonical" href="https://fe-banshisenko-calc.jakeuj.com/">
+  <meta name="theme-color" content="#182332">
+  <link rel="icon" href="favicon.ico" sizes="32x32">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="萬紫千紅 培養計算器">
+  <meta property="og:locale" content="zh_TW">
+  <meta property="og:url" content="https://fe-banshisenko-calc.jakeuj.com/">
+  <meta property="og:title" content="萬紫千紅 培養計算器｜聖火降魔錄 萬縷千絲 成長率・轉職・坐騎預測">
+  <meta property="og:description" content="《聖火降魔錄 萬縷千絲》（萬紫千紅／Fire Emblem: Fortune's Weave）角色培養計算器：從目前等級、職業與實際能力值出發，預測轉職路線的期望值與機率區間，含成長判定、凱伊篇坐騎成長加成、戰車兵之道與自動推薦。">
+  <meta property="og:image" content="https://fe-banshisenko-calc.jakeuj.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="萬紫千紅 培養計算器：期望值、機率區間、成長判定、坐騎加成、自動推薦">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "萬紫千紅 培養計算器",
+    "url": "https://fe-banshisenko-calc.jakeuj.com/",
+    "description": "《聖火降魔錄 萬縷千絲》（萬紫千紅／Fire Emblem: Fortune's Weave）角色培養計算器：從目前等級、職業與實際能力值出發，預測轉職路線的期望值與機率區間，含成長判定、凱伊篇坐騎成長加成、戰車兵之道與自動推薦。",
+    "inLanguage": "zh-Hant",
+    "applicationCategory": "GameApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript",
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "TWD" },
+    "image": "https://fe-banshisenko-calc.jakeuj.com/og-image.png",
+    "featureList": ["期望值預測", "機率區間", "成長判定", "坐騎成長加成", "戰車兵之道", "自動推薦轉職路線"],
+    "about": {
+      "@type": "VideoGame",
+      "name": "聖火降魔錄 萬縷千絲",
+      "alternateName": ["萬紫千紅", "Fire Emblem: Fortune's Weave", "ファイアーエムブレム 万紫千紅", "火焰之纹章 万紫千红"]
+    }
+  }
+  </script>
+  <link rel="stylesheet" href="style.css?v=12ff95e5">
 </head>
 <body>
   <header class="site-header">
@@ -16,6 +55,11 @@
   </header>
 
   <main class="wrap">
+    <noscript>
+      <section class="card">
+        <p>這個計算器需要啟用 JavaScript 才能使用。它能以《聖火降魔錄 萬縷千絲》（萬紫千紅）角色目前的等級、職業、坐騎與實際能力值為起點，預測之後轉職路線的期望值與機率區間，判定成長好壞，並依能力權重自動推薦轉職＋坐騎路線。</p>
+      </section>
+    </noscript>
     <section class="card" id="unit-panel" aria-label="角色"></section>
 
     <nav class="tabs" role="tablist">
@@ -48,6 +92,7 @@
 
   <footer class="wrap foot">
     <span id="data-meta"></span>
+    <p>《聖火降魔錄 萬縷千絲》（萬紫千紅／Fire Emblem: Fortune's Weave）玩家自製的非官方工具，與任天堂、Intelligent Systems、Koei Tecmo 無關。</p>
   </footer>
 
   <script src="data.js?v=81b906b5"></script>

@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /tools/
+Disallow: /.agents/
+
+Sitemap: https://fe-banshisenko-calc.jakeuj.com/sitemap.xml

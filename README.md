@@ -20,6 +20,7 @@ node tools/build-data.mjs --refresh   # 重新下載 game8 資料並產生 data.
 node tools/test-calc.mjs              # 驗證計算（含與 game8 計算器輸出逐值比對）
 node tools/serve.mjs                  # 本機預覽 http://localhost:8765/
 node tools/stamp-assets.mjs           # 發布前更新 index.html 的 ?v= 版本參數（依檔案內容雜湊）
+node tools/build-icons.mjs            # 改了 favicon.svg 或分享圖文字後，重新產生 favicon.ico、PNG 圖示與 og-image.png（需本機 Chrome／Edge）
 ```
 
 - `calc.js`：計算核心（瀏覽器與 Node 共用）
